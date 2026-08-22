@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2, MailCheck, Sunrise } from "lucide-react";
+import { AlertCircle, Loader2, MailCheck, Sunrise } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/dayflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -63,6 +64,16 @@ function AuthPage() {
   const [department, setDepartment] = useState("Engineering");
   const [designation, setDesignation] = useState("");
 
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [signUpError, setSignUpError] = useState<string | null>(null);
+
+  // Dynamic password security checks
+  const hasMinLength = signupPassword.length >= 8;
+  const hasUppercase = /[A-Z]/.test(signupPassword);
+  const hasLowercase = /[a-z]/.test(signupPassword);
+  const hasNumber = /\d/.test(signupPassword);
+  const hasSpecial = /[^A-Za-z0-9]/.test(signupPassword);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard" });
@@ -71,10 +82,12 @@ function AuthPage() {
 
   async function handleSignIn(e: FormEvent) {
     e.preventDefault();
+    setSignInError(null);
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) {
+      setSignInError(error.message);
       toast.error(error.message);
       return;
     }
@@ -84,10 +97,16 @@ function AuthPage() {
 
   async function handleSignUp(e: FormEvent) {
     e.preventDefault();
-    if (signupPassword.length < 8 || !/\d/.test(signupPassword)) {
-      toast.error("Password must be 8+ characters and include a number.");
+    setSignUpError(null);
+
+    // Validate security rules
+    if (!hasMinLength || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+      const errorMsg = "Password must be 8+ characters and include uppercase, lowercase, a number, and a special character.";
+      setSignUpError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
+
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
@@ -104,6 +123,7 @@ function AuthPage() {
     });
     setBusy(false);
     if (error) {
+      setSignUpError(error.message);
       toast.error(error.message);
       return;
     }
@@ -183,6 +203,13 @@ function AuthPage() {
 
                 <TabsContent value="signin">
                   <form onSubmit={handleSignIn} className="mt-5 space-y-4">
+                    {signInError && (
+                      <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5 text-destructive">
+                        <AlertCircle className="size-4 text-destructive" />
+                        <AlertTitle>Sign in failed</AlertTitle>
+                        <AlertDescription>{signInError}</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="space-y-1.5">
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -220,6 +247,13 @@ function AuthPage() {
 
                 <TabsContent value="signup">
                   <form onSubmit={handleSignUp} className="mt-5 space-y-4">
+                    {signUpError && (
+                      <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5 text-destructive">
+                        <AlertCircle className="size-4 text-destructive" />
+                        <AlertTitle>Sign up failed</AlertTitle>
+                        <AlertDescription>{signUpError}</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label htmlFor="fullName">Full name</Label>
@@ -264,9 +298,44 @@ function AuthPage() {
                         required
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
-                        placeholder="8+ characters with a number"
+                        placeholder="Choose a strong password"
                         className="rounded-xl bg-card"
                       />
+                      
+                      {/* Password Requirements Checklist */}
+                      <div className="mt-2.5 rounded-xl border border-border bg-muted/20 p-3 space-y-1.5 text-[11px] leading-none">
+                        <p className="font-semibold text-muted-foreground mb-2 text-xs">Password requirements:</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-300 ${hasMinLength ? "bg-status-present/20 text-status-present" : "bg-secondary text-muted-foreground"}`}>
+                            ✓
+                          </span>
+                          <span className={hasMinLength ? "text-foreground" : "text-muted-foreground"}>At least 8 characters</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-300 ${hasUppercase ? "bg-status-present/20 text-status-present" : "bg-secondary text-muted-foreground"}`}>
+                            ✓
+                          </span>
+                          <span className={hasUppercase ? "text-foreground" : "text-muted-foreground"}>An uppercase letter (A-Z)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-300 ${hasLowercase ? "bg-status-present/20 text-status-present" : "bg-secondary text-muted-foreground"}`}>
+                            ✓
+                          </span>
+                          <span className={hasLowercase ? "text-foreground" : "text-muted-foreground"}>A lowercase letter (a-z)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-300 ${hasNumber ? "bg-status-present/20 text-status-present" : "bg-secondary text-muted-foreground"}`}>
+                            ✓
+                          </span>
+                          <span className={hasNumber ? "text-foreground" : "text-muted-foreground"}>A number (0-9)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-4 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-300 ${hasSpecial ? "bg-status-present/20 text-status-present" : "bg-secondary text-muted-foreground"}`}>
+                            ✓
+                          </span>
+                          <span className={hasSpecial ? "text-foreground" : "text-muted-foreground"}>A special character (e.g. !@#$%^&*)</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
@@ -315,7 +384,7 @@ function AuthPage() {
                           className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium has-checked:border-primary has-checked:bg-accent/50"
                         >
                           <RadioGroupItem value="admin" id="role-admin" />
-                          HR / Admin
+                          HR
                         </Label>
                       </RadioGroup>
                     </div>
