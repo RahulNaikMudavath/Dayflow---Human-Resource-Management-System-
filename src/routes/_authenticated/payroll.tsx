@@ -2,22 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { IndianRupee, Loader2, Pencil, Plus, Users, Wallet } from "lucide-react";
+import { FileDown, IndianRupee, Loader2, Pencil, Plus, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import {
-  supabase,
-  formatINR,
-  netPay,
-  type Profile,
-  type SalaryStructure,
-} from "@/lib/dayflow";
+import { supabase, formatINR, netPay, type Profile, type SalaryStructure } from "@/lib/dayflow";
 import { useCurrentUser, type CurrentUser } from "@/hooks/use-current-user";
-import {
-  EmptyState,
-  InitialsAvatar,
-  PageHeader,
-  StatCard,
-} from "@/components/dayflow/bits";
+import { EmptyState, InitialsAvatar, PageHeader, StatCard } from "@/components/dayflow/bits";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/payroll")({
 type SalaryWithProfile = SalaryStructure & {
   profiles?: Pick<
     Profile,
-    "full_name" | "employee_id" | "department" | "designation"
+    "full_name" | "employee_id" | "department" | "designation" | "avatar_url"
   > | null;
 };
 
@@ -87,10 +76,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   if (!salary) {
     return (
       <div>
-        <PageHeader
-          title="Payroll"
-          description="Your salary structure, always visible."
-        />
+        <PageHeader title="Payroll" description="Your salary structure, always visible." />
         <EmptyState
           icon={Wallet}
           title="Salary not configured yet"
@@ -103,6 +89,20 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   const gross = salary.basic + salary.hra + salary.allowances;
   const net = netPay(salary);
 
+  const download = async () => {
+    const { exportPayrollPdf } = await import("@/lib/pdf");
+    exportPayrollPdf({
+      profile: me.profile ?? {
+        full_name: me.email,
+        employee_id: "—",
+        department: null,
+        designation: null,
+      },
+      salary,
+    });
+    toast.success("Salary summary PDF downloaded.");
+  };
+
   const rows = [
     { label: "Basic", value: salary.basic, tone: "bg-chart-1" },
     { label: "House rent allowance", value: salary.hra, tone: "bg-chart-2" },
@@ -114,7 +114,12 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
       <PageHeader
         title="Payroll"
         description="Your salary structure — read-only, always transparent."
-      />
+      >
+        <Button className="rounded-xl" onClick={() => void download()}>
+          <FileDown className="size-4" />
+          Download PDF
+        </Button>
+      </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="relative overflow-hidden rounded-2xl bg-sidebar p-8 text-sidebar-foreground shadow-lift lg:col-span-2">
@@ -130,9 +135,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
           </p>
           <div className="mt-6 rounded-xl bg-sidebar-accent/60 px-4 py-3 text-sm">
             <p className="text-sidebar-foreground/70">Annual gross</p>
-            <p className="font-display text-xl font-semibold">
-              {formatINR(gross * 12)}
-            </p>
+            <p className="font-display text-xl font-semibold">{formatINR(gross * 12)}</p>
           </div>
           <p className="mt-4 text-xs text-sidebar-foreground/50">
             Effective from {format(new Date(salary.effective_from), "dd MMM yyyy")}
@@ -140,9 +143,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-3">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Monthly breakdown
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Monthly breakdown</h2>
           <div className="mt-5 space-y-4">
             {rows.map((r) => (
               <div key={r.label}>
@@ -164,9 +165,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
             ))}
             <div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Deductions (PF, tax)
-                </span>
+                <span className="text-muted-foreground">Deductions (PF, tax)</span>
                 <span className="font-semibold text-status-absent tabular-nums">
                   − {formatINR(salary.deductions)}
                 </span>
@@ -182,9 +181,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
             </div>
           </div>
           <div className="mt-6 flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
-            <span className="text-sm font-semibold text-accent-foreground">
-              Take-home
-            </span>
+            <span className="text-sm font-semibold text-accent-foreground">Take-home</span>
             <span className="font-display text-xl font-semibold text-accent-foreground tabular-nums">
               {formatINR(net)}
             </span>
@@ -207,7 +204,7 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("salary_structures")
-        .select("*, profiles(full_name, employee_id, department, designation)")
+        .select("*, profiles(full_name, employee_id, department, designation, avatar_url)")
         .order("basic", { ascending: false });
       return (data ?? []) as unknown as SalaryWithProfile[];
     },
@@ -216,10 +213,7 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
   const { data: everyone } = useQuery({
     queryKey: ["profiles", "all"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const { data } = await supabase.from("profiles").select("*").order("full_name");
       return (data ?? []) as Profile[];
     },
   });
@@ -230,9 +224,21 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
   }, [salaries, everyone]);
 
   const totalNet = (salaries ?? []).reduce((s, r) => s + netPay(r), 0);
-  const avgNet = (salaries ?? []).length
-    ? Math.round(totalNet / (salaries ?? []).length)
-    : 0;
+  const avgNet = (salaries ?? []).length ? Math.round(totalNet / (salaries ?? []).length) : 0;
+
+  const exportOne = async (s: SalaryWithProfile) => {
+    const { exportPayrollPdf } = await import("@/lib/pdf");
+    exportPayrollPdf({
+      profile: {
+        full_name: s.profiles?.full_name ?? "Unknown",
+        employee_id: s.profiles?.employee_id ?? "—",
+        department: s.profiles?.department ?? null,
+        designation: s.profiles?.designation ?? null,
+      },
+      salary: s,
+    });
+    toast.success(`Salary summary downloaded for ${s.profiles?.full_name ?? "employee"}.`);
+  };
 
   return (
     <div>
@@ -295,12 +301,11 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                     <div className="flex items-center gap-3">
                       <InitialsAvatar
                         name={s.profiles?.full_name ?? "?"}
+                        src={s.profiles?.avatar_url}
                         className="size-9 text-xs"
                       />
                       <div>
-                        <p className="font-semibold text-foreground">
-                          {s.profiles?.full_name}
-                        </p>
+                        <p className="font-semibold text-foreground">{s.profiles?.full_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {s.profiles?.employee_id} · {s.profiles?.designation}
                         </p>
@@ -323,15 +328,26 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                     {formatINR(netPay(s))}
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg"
-                      onClick={() => setEditing(s)}
-                    >
-                      <Pencil className="size-3.5" />
-                      Edit
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => void exportOne(s)}
+                      >
+                        <FileDown className="size-3.5" />
+                        PDF
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => setEditing(s)}
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -435,11 +451,7 @@ function SalaryDialog({
     onError: (e) => toast.error(e.message),
   });
 
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-  ) => (
+  const field = (label: string, value: string, set: (v: string) => void) => (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Input
@@ -457,13 +469,9 @@ function SalaryDialog({
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
-            {salary
-              ? `Edit salary — ${salary.profiles?.full_name ?? ""}`
-              : "New salary structure"}
+            {salary ? `Edit salary — ${salary.profiles?.full_name ?? ""}` : "New salary structure"}
           </DialogTitle>
-          <DialogDescription>
-            Monthly amounts in INR. Net pay updates live.
-          </DialogDescription>
+          <DialogDescription>Monthly amounts in INR. Net pay updates live.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {!salary && (
@@ -490,20 +498,14 @@ function SalaryDialog({
             {field("Deductions", deductions, setDeductions)}
           </div>
           <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
-            <span className="text-sm font-semibold text-accent-foreground">
-              Net monthly pay
-            </span>
+            <span className="text-sm font-semibold text-accent-foreground">Net monthly pay</span>
             <span className="font-display text-xl font-semibold text-accent-foreground tabular-nums">
               {formatINR(net)}
             </span>
           </div>
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className="rounded-xl"
-          >
+          <Button onClick={() => save.mutate()} disabled={save.isPending} className="rounded-xl">
             {save.isPending && <Loader2 className="size-4 animate-spin" />}
             Save structure
           </Button>

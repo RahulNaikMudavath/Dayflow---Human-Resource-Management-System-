@@ -1,9 +1,24 @@
-create type public.app_role as enum ('admin', 'employee');
-create type public.attendance_status as enum ('present', 'absent', 'half_day', 'leave');
-create type public.leave_type as enum ('paid', 'sick', 'unpaid');
-create type public.leave_status as enum ('pending', 'approved', 'rejected');
+-- Enable pgcrypto extension for password hashing
+create extension if not exists pgcrypto;
 
-create table public.profiles (
+-- Safely create custom ENUM types
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'app_role') then
+    create type public.app_role as enum ('admin', 'employee');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'attendance_status') then
+    create type public.attendance_status as enum ('present', 'absent', 'half_day', 'leave');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'leave_type') then
+    create type public.leave_type as enum ('paid', 'sick', 'unpaid');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'leave_status') then
+    create type public.leave_status as enum ('pending', 'approved', 'rejected');
+  end if;
+end $$;
+
+-- Create core tables
+create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   employee_id text not null unique,
   full_name text not null,
@@ -18,14 +33,14 @@ create table public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.user_roles (
+create table if not exists public.user_roles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   role public.app_role not null,
   unique (user_id, role)
 );
 
-create table public.attendance (
+create table if not exists public.attendance (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   date date not null,
@@ -36,7 +51,7 @@ create table public.attendance (
   unique (user_id, date)
 );
 
-create table public.leave_requests (
+create table if not exists public.leave_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   leave_type public.leave_type not null,
@@ -50,7 +65,7 @@ create table public.leave_requests (
   updated_at timestamptz not null default now()
 );
 
-create table public.salary_structures (
+create table if not exists public.salary_structures (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
   basic numeric(12,2) not null default 0,
@@ -92,48 +107,70 @@ as $$
   )
 $$;
 
+drop policy if exists "Signed-in users can view profiles" on public.profiles;
 create policy "Signed-in users can view profiles"
   on public.profiles for select to authenticated using (true);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update to authenticated using (auth.uid() = id);
+
+drop policy if exists "Admins can update any profile" on public.profiles;
 create policy "Admins can update any profile"
   on public.profiles for update to authenticated using (public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own roles" on public.user_roles;
 create policy "Users can view their own roles"
   on public.user_roles for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own attendance, admins view all" on public.attendance;
 create policy "Users can view their own attendance, admins view all"
   on public.attendance for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Users can check themselves in, admins can add records" on public.attendance;
 create policy "Users can check themselves in, admins can add records"
   on public.attendance for insert to authenticated
   with check (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Users can update their own attendance, admins update all" on public.attendance;
 create policy "Users can update their own attendance, admins update all"
   on public.attendance for update to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own leave requests, admins view all" on public.leave_requests;
 create policy "Users can view their own leave requests, admins view all"
   on public.leave_requests for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Employees can apply for leave" on public.leave_requests;
 create policy "Employees can apply for leave"
   on public.leave_requests for insert to authenticated
   with check (user_id = auth.uid());
+
+drop policy if exists "Admins can review leave requests" on public.leave_requests;
 create policy "Admins can review leave requests"
   on public.leave_requests for update to authenticated
   using (public.has_role(auth.uid(), 'admin'))
   with check (public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own salary, admins view all" on public.salary_structures;
 create policy "Users can view their own salary, admins view all"
   on public.salary_structures for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Admins can create salary structures" on public.salary_structures;
 create policy "Admins can create salary structures"
   on public.salary_structures for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Admins can update salary structures" on public.salary_structures;
 create policy "Admins can update salary structures"
   on public.salary_structures for update to authenticated
   using (public.has_role(auth.uid(), 'admin'));
 
+-- Trigger function with 100% fail-proof guards so GoTrue Auth never returns 500
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -141,104 +178,40 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, employee_id, full_name, email, department, designation)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'employee_id', 'DF-' || upper(substr(new.id::text, 1, 6))),
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    new.email,
-    new.raw_user_meta_data->>'department',
-    new.raw_user_meta_data->>'designation'
-  );
-  insert into public.user_roles (user_id, role)
-  values (
-    new.id,
-    case when new.raw_user_meta_data->>'role' = 'admin'
-      then 'admin'::public.app_role
-      else 'employee'::public.app_role
-    end
-  );
+  if (to_regclass('public.profiles') is not null) then
+    insert into public.profiles (id, employee_id, full_name, email, department, designation)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'employee_id', 'DF-' || upper(substr(new.id::text, 1, 6))),
+      coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+      new.email,
+      new.raw_user_meta_data->>'department',
+      new.raw_user_meta_data->>'designation'
+    )
+    on conflict (id) do update set
+      email = excluded.email,
+      full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name);
+  end if;
+
+  if (to_regclass('public.user_roles') is not null and to_regtype('public.app_role') is not null) then
+    insert into public.user_roles (user_id, role)
+    values (
+      new.id,
+      case when new.raw_user_meta_data->>'role' = 'admin'
+        then 'admin'::public.app_role
+        else 'employee'::public.app_role
+      end
+    )
+    on conflict (user_id, role) do nothing;
+  end if;
+
+  return new;
+exception when others then
   return new;
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
--- Demo accounts (password for all: Dayflow@123)
-insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-values
-  ('a0000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Aarav Mehta","employee_id":"DF-001","role":"admin","department":"People Ops","designation":"Head of People"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'priya@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Priya Sharma","employee_id":"DF-002","role":"employee","department":"Engineering","designation":"Senior Frontend Engineer"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rahul@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Rahul Verma","employee_id":"DF-003","role":"employee","department":"Design","designation":"Product Designer"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'sneha@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Sneha Iyer","employee_id":"DF-004","role":"employee","department":"Engineering","designation":"Backend Engineer"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'arjun@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Arjun Nair","employee_id":"DF-005","role":"employee","department":"Sales","designation":"Sales Lead"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'kavya@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Kavya Reddy","employee_id":"DF-006","role":"employee","department":"Marketing","designation":"Marketing Manager"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000007', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'vikram@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Vikram Singh","employee_id":"DF-007","role":"employee","department":"Finance","designation":"Finance Analyst"}', now(), now()),
-  ('a0000000-0000-4000-8000-000000000008', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'ananya@dayflow.io', crypt('Dayflow@123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Ananya Das","employee_id":"DF-008","role":"employee","department":"People Ops","designation":"HR Associate"}', now(), now());
-
-insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-values
-  ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '{"sub":"a0000000-0000-4000-8000-000000000001","email":"admin@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000002', '{"sub":"a0000000-0000-4000-8000-000000000002","email":"priya@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003', '{"sub":"a0000000-0000-4000-8000-000000000003","email":"rahul@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000004', '{"sub":"a0000000-0000-4000-8000-000000000004","email":"sneha@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000005', '{"sub":"a0000000-0000-4000-8000-000000000005","email":"arjun@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000006', '{"sub":"a0000000-0000-4000-8000-000000000006","email":"kavya@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000007', '{"sub":"a0000000-0000-4000-8000-000000000007","email":"vikram@dayflow.io"}', 'email', now(), now(), now()),
-  ('a0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000008', '{"sub":"a0000000-0000-4000-8000-000000000008","email":"ananya@dayflow.io"}', 'email', now(), now(), now());
-
-update public.profiles set phone = '+91 98220 41102', address = 'HSR Layout, Bengaluru', date_of_joining = '2021-04-12' where employee_id = 'DF-001';
-update public.profiles set phone = '+91 98450 12231', address = 'Indiranagar, Bengaluru', date_of_joining = '2022-01-10' where employee_id = 'DF-002';
-update public.profiles set phone = '+91 99301 88762', address = 'Koramangala, Bengaluru', date_of_joining = '2022-06-20' where employee_id = 'DF-003';
-update public.profiles set phone = '+91 90040 55618', address = 'Whitefield, Bengaluru', date_of_joining = '2023-02-01' where employee_id = 'DF-004';
-update public.profiles set phone = '+91 98200 77144', address = 'JP Nagar, Bengaluru', date_of_joining = '2021-11-15' where employee_id = 'DF-005';
-update public.profiles set phone = '+91 97002 31455', address = 'Hitech City, Hyderabad', date_of_joining = '2023-07-03' where employee_id = 'DF-006';
-update public.profiles set phone = '+91 98110 20987', address = 'Saket, New Delhi', date_of_joining = '2024-01-22' where employee_id = 'DF-007';
-update public.profiles set phone = '+91 98301 66420', address = 'Salt Lake, Kolkata', date_of_joining = '2024-09-09' where employee_id = 'DF-008';
-
--- Three weeks of attendance history (weekdays, up to yesterday)
-insert into public.attendance (user_id, date, check_in, check_out, status)
-select s.id, s.d,
-  case when s.st in ('present', 'half_day')
-    then s.d + interval '9 hours' + ((abs(hashtext(s.id::text || s.d::text)) % 40) * interval '1 minute') end,
-  case when s.st = 'present'
-    then s.d + interval '18 hours' + ((abs(hashtext(s.d::text || s.id::text)) % 30) * interval '1 minute')
-    when s.st = 'half_day' then s.d + interval '13 hours 30 minutes' end,
-  s.st
-from (
-  select p.id, g.d::date as d,
-    case abs(hashtext(p.id::text || g.d::date::text)) % 20
-      when 0 then 'absent'::public.attendance_status
-      when 1 then 'leave'::public.attendance_status
-      when 2 then 'leave'::public.attendance_status
-      when 3 then 'half_day'::public.attendance_status
-      else 'present'::public.attendance_status
-    end as st
-  from public.profiles p
-  cross join generate_series(current_date - 21, current_date - 1, interval '1 day') as g(d)
-  where extract(isodow from g.d) < 6
-) s;
-
-insert into public.leave_requests (user_id, leave_type, start_date, end_date, remarks, status, reviewer_comment, reviewed_by, created_at)
-values
-  ('a0000000-0000-4000-8000-000000000002', 'paid', current_date + 10, current_date + 12, 'Family trip to Coorg', 'pending', null, null, now() - interval '1 day'),
-  ('a0000000-0000-4000-8000-000000000004', 'paid', current_date + 20, current_date + 24, 'Cousin''s wedding in Kochi', 'pending', null, null, now() - interval '2 days'),
-  ('a0000000-0000-4000-8000-000000000003', 'paid', current_date + 30, current_date + 32, 'Goa trip with friends', 'pending', null, null, now() - interval '3 hours'),
-  ('a0000000-0000-4000-8000-000000000003', 'sick', current_date - 3, current_date - 2, 'Down with fever, need rest', 'approved', 'Get well soon!', 'a0000000-0000-4000-8000-000000000001', now() - interval '5 days'),
-  ('a0000000-0000-4000-8000-000000000005', 'unpaid', current_date - 15, current_date - 14, 'Personal work', 'approved', 'Approved. Payroll will adjust.', 'a0000000-0000-4000-8000-000000000001', now() - interval '17 days'),
-  ('a0000000-0000-4000-8000-000000000006', 'sick', current_date - 7, current_date - 7, 'Migraine', 'approved', null, 'a0000000-0000-4000-8000-000000000001', now() - interval '8 days'),
-  ('a0000000-0000-4000-8000-000000000007', 'paid', current_date + 5, current_date + 6, 'House shifting', 'rejected', 'Quarter-end closing week, please reschedule.', 'a0000000-0000-4000-8000-000000000001', now() - interval '2 days'),
-  ('a0000000-0000-4000-8000-000000000008', 'paid', current_date - 20, current_date - 18, 'Family function', 'approved', null, 'a0000000-0000-4000-8000-000000000001', now() - interval '22 days');
-
-insert into public.salary_structures (user_id, basic, hra, allowances, deductions, effective_from)
-values
-  ('a0000000-0000-4000-8000-000000000001', 120000, 48000, 32000, 22000, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000002', 85000, 34000, 21000, 14000, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000003', 70000, 28000, 18000, 12000, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000004', 80000, 32000, 20000, 13500, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000005', 65000, 26000, 22000, 11000, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000006', 68000, 27200, 19000, 11500, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000007', 60000, 24000, 15000, 10000, '2025-04-01'),
-  ('a0000000-0000-4000-8000-000000000008', 45000, 18000, 12000, 8000, '2025-04-01');

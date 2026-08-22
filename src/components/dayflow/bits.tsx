@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
+  supabase,
   ATTENDANCE_META,
   LEAVE_STATUS_META,
   avatarTone,
@@ -9,6 +11,22 @@ import {
   type LeaveStatus,
 } from "@/lib/dayflow";
 import { cn } from "@/lib/utils";
+
+/** Resolve a private-bucket avatar path to a short-lived signed URL. */
+export function useAvatarUrl(path: string | null | undefined) {
+  return useQuery({
+    queryKey: ["avatar-url", path],
+    enabled: !!path,
+    staleTime: 50 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(path!, 60 * 60);
+      if (error) return null;
+      return data.signedUrl;
+    },
+  });
+}
 
 export function PageHeader({
   title,
@@ -25,9 +43,7 @@ export function PageHeader({
         <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
           {title}
         </h1>
-        {description ? (
-          <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="mt-1.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {children ? <div className="flex items-center gap-2">{children}</div> : null}
     </div>
@@ -55,9 +71,7 @@ export function StatCard({
           <Icon className="size-4" />
         </span>
       </div>
-      <p className="mt-3 font-display text-3xl font-semibold text-foreground">
-        {value}
-      </p>
+      <p className="mt-3 font-display text-3xl font-semibold text-foreground">{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -65,11 +79,24 @@ export function StatCard({
 
 export function InitialsAvatar({
   name,
+  src,
   className,
 }: {
   name: string;
+  /** Storage path inside the private "avatars" bucket. */
+  src?: string | null | undefined;
   className?: string;
 }) {
+  const { data: url } = useAvatarUrl(src);
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        className={cn("shrink-0 rounded-full object-cover", className ?? "size-10")}
+      />
+    );
+  }
   return (
     <span
       className={cn(
@@ -128,9 +155,7 @@ export function EmptyState({
       <span className="flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
         <Icon className="size-6" />
       </span>
-      <h3 className="mt-4 font-display text-lg font-semibold text-foreground">
-        {title}
-      </h3>
+      <h3 className="mt-4 font-display text-lg font-semibold text-foreground">{title}</h3>
       {description ? (
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       ) : null}

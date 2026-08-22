@@ -85,13 +85,11 @@ function LandingPage() {
             Human Resource Management
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl font-display text-5xl leading-[1.05] font-semibold tracking-tight text-foreground md:text-7xl">
-            Every workday,{" "}
-            <span className="sunrise-text">perfectly aligned.</span>
+            Every workday, <span className="sunrise-text">perfectly aligned.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground md:text-lg">
-            Dayflow brings your people, their attendance, their time off and
-            their pay into one warm, calm workspace — for HR officers and
-            employees alike.
+            Dayflow brings your people, their attendance, their time off and their pay into one
+            warm, calm workspace — for HR officers and employees alike.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -129,12 +127,8 @@ function LandingPage() {
               <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
                 <f.icon className="size-5" />
               </span>
-              <h2 className="mt-4 font-display text-xl font-semibold text-foreground">
-                {f.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {f.copy}
-              </p>
+              <h2 className="mt-4 font-display text-xl font-semibold text-foreground">{f.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.copy}</p>
             </article>
           ))}
         </section>
@@ -150,12 +144,11 @@ function LandingPage() {
             <ul className="mt-5 space-y-3 text-sm text-sidebar-foreground/75">
               <li className="flex gap-3">
                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sidebar-primary" />
-                Live attendance board with present, absent, half-day and leave
-                status for everyone
+                Live attendance board with present, absent, half-day and leave status for everyone
               </li>
               <li className="flex gap-3">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sidebar-primary" />
-                A pending-approvals queue for time off, with one-click decisions
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sidebar-primary" />A
+                pending-approvals queue for time off, with one-click decisions
               </li>
               <li className="flex gap-3">
                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sidebar-primary" />
@@ -173,8 +166,7 @@ function LandingPage() {
             <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
               <li className="flex gap-3">
                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                Check in with one tap and see your hours build up through the
-                week
+                Check in with one tap and see your hours build up through the week
               </li>
               <li className="flex gap-3">
                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
@@ -182,8 +174,7 @@ function LandingPage() {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                Your profile and salary structure, always visible and always
-                yours
+                Your profile and salary structure, always visible and always yours
               </li>
             </ul>
           </div>
@@ -194,9 +185,7 @@ function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-muted-foreground md:px-8">
           <div className="flex items-center gap-2">
             <Sunrise className="size-4 text-primary" />
-            <span className="font-display font-semibold text-foreground">
-              Dayflow
-            </span>
+            <span className="font-display font-semibold text-foreground">Dayflow</span>
           </div>
           <p>Every workday, perfectly aligned.</p>
         </div>

@@ -3,12 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, LogIn, LogOut, Sunrise } from "lucide-react";
 import { toast } from "sonner";
-import {
-  supabase,
-  formatTime,
-  workHours,
-  type AttendanceRow,
-} from "@/lib/dayflow";
+import { supabase, formatTime, workHours, type AttendanceRow } from "@/lib/dayflow";
 import { Button } from "@/components/ui/button";
 
 export function CheckInCard({ userId }: { userId: string }) {
@@ -81,16 +76,12 @@ export function CheckInCard({ userId }: { userId: string }) {
           </div>
           <p className="mt-2 font-display text-5xl font-semibold tracking-tight tabular-nums">
             {format(now, "hh:mm")}
-            <span className="ml-1 text-2xl text-sidebar-foreground/60">
-              {format(now, "ss a")}
-            </span>
+            <span className="ml-1 text-2xl text-sidebar-foreground/60">{format(now, "ss a")}</span>
           </p>
           <p className="mt-2 text-sm text-sidebar-foreground/70">
             {!todayRow && "You haven't checked in yet today."}
             {todayRow && !todayRow.check_out && (
-              <>
-                In at {formatTime(todayRow.check_in)} — you're on the clock.
-              </>
+              <>In at {formatTime(todayRow.check_in)} — you're on the clock.</>
             )}
             {todayRow?.check_out && (
               <>
@@ -108,11 +99,7 @@ export function CheckInCard({ userId }: { userId: string }) {
               disabled={busy}
               className="h-12 rounded-xl bg-sidebar-primary px-6 text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
             >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <LogIn className="size-4" />
-              )}
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
               Check in
             </Button>
           ) : !todayRow.check_out ? (
@@ -123,11 +110,7 @@ export function CheckInCard({ userId }: { userId: string }) {
               disabled={busy}
               className="h-12 rounded-xl border-sidebar-border bg-transparent px-6 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <LogOut className="size-4" />
-              )}
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
               Check out
             </Button>
           ) : (

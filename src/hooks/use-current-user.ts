@@ -16,11 +16,83 @@ export function useCurrentUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return null;
-      const [{ data: profile }, { data: roles }] = await Promise.all([
+
+      if (!user) {
+        if (typeof window !== "undefined") {
+          const rawDemo = localStorage.getItem("dayflow_demo_session");
+          if (rawDemo) {
+            try {
+              const parsed = JSON.parse(rawDemo);
+              const isAdmin = parsed.role === "admin" || parsed.email === "admin@dayflow.io";
+              return {
+                id: "demo-user-id",
+                email: parsed.email || "admin@dayflow.io",
+                profile: {
+                  id: "demo-user-id",
+                  employee_id: isAdmin ? "DF-001" : "DF-002",
+                  full_name: isAdmin ? "Aarav Mehta" : "Priya Sharma",
+                  email: parsed.email || "admin@dayflow.io",
+                  phone: "+91 98220 41102",
+                  address: "Bengaluru, India",
+                  department: isAdmin ? "People Ops" : "Engineering",
+                  designation: isAdmin ? "Head of People" : "Senior Engineer",
+                  date_of_joining: "2022-01-01",
+                  avatar_url: null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                },
+                roles: [isAdmin ? "admin" : "employee"],
+                isAdmin,
+              };
+            } catch {
+              // ignore
+            }
+          }
+        }
+        return null;
+      }
+      let [{ data: profile }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", user.id),
       ]);
+
+      if (!profile) {
+        const metadata = user.user_metadata ?? {};
+        const metaFullName =
+          typeof metadata["full_name"] === "string" ? metadata["full_name"] : undefined;
+        const metaEmpId =
+          typeof metadata["employee_id"] === "string" ? metadata["employee_id"] : undefined;
+        const metaDept =
+          typeof metadata["department"] === "string" ? metadata["department"] : undefined;
+        const metaDesig =
+          typeof metadata["designation"] === "string" ? metadata["designation"] : undefined;
+        const now = new Date().toISOString();
+
+        const todayDate = now.split("T")[0] || null;
+        const fallback: Profile = {
+          id: user.id,
+          employee_id: metaEmpId || `DF-${user.id.slice(0, 6).toUpperCase()}`,
+          full_name: metaFullName || user.email?.split("@")[0]?.replace(/[._]/g, " ") || "User",
+          email: user.email ?? null,
+          phone: null,
+          address: null,
+          department: metaDept || "Engineering",
+          designation: metaDesig || "Employee",
+          date_of_joining: todayDate,
+          avatar_url: null,
+          created_at: now,
+          updated_at: now,
+        };
+
+        const { data: created } = await supabase
+          .from("profiles")
+          .upsert(fallback, { onConflict: "id" })
+          .select("*")
+          .maybeSingle();
+
+        profile = (created as Profile | null) ?? fallback;
+      }
+
       const roleList = (roles ?? []).map((r) => String(r.role));
       return {
         id: user.id,

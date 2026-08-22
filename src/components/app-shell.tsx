@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   Palmtree,
+  Sparkles,
   Sunrise,
   UserRound,
   Users,
@@ -16,6 +17,7 @@ import {
 import { supabase } from "@/lib/dayflow";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { InitialsAvatar } from "@/components/dayflow/bits";
+import { NotificationBell } from "@/components/dayflow/notification-bell";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/assistant", label: "AI Assistant", icon: Sparkles },
   { to: "/attendance", label: "Attendance", icon: CalendarCheck },
   { to: "/leave", label: "Time Off", icon: Palmtree },
   { to: "/payroll", label: "Payroll", icon: IndianRupee },
@@ -65,9 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <nav className="flex flex-1 flex-col gap-1 px-3">
       {items.map((item) => {
         const active =
-          item.to === "/dashboard"
-            ? pathname === item.to
-            : pathname.startsWith(item.to);
+          item.to === "/dashboard" ? pathname === item.to : pathname.startsWith(item.to);
         return (
           <Link
             key={item.to}
@@ -82,9 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <item.icon className="size-4" />
             {item.label}
-            {active ? (
-              <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-            ) : null}
+            {active ? <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" /> : null}
           </Link>
         );
       })}
@@ -96,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3">
         <InitialsAvatar
           name={me?.profile?.full_name ?? "…"}
+          src={me?.profile?.avatar_url}
           className="size-9 text-xs"
         />
         <div className="min-w-0 flex-1">
@@ -120,7 +120,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col gap-6 border-r border-sidebar-border bg-sidebar py-6 md:flex">
-        {brand}
+        <div className="flex items-center justify-between pr-4">
+          {brand}
+          <NotificationBell dark />
+        </div>
         {nav()}
         {userCard}
       </aside>
@@ -130,34 +133,33 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Sunrise className="size-4" />
           </span>
-          <span className="font-display text-lg font-semibold text-foreground">
-            Dayflow
-          </span>
+          <span className="font-display text-lg font-semibold text-foreground">Dayflow</span>
         </Link>
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <button
-              aria-label="Open menu"
-              className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-foreground"
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <button
+                aria-label="Open menu"
+                className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-foreground"
+              >
+                <Menu className="size-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="flex w-72 flex-col gap-6 border-sidebar-border bg-sidebar p-0 py-6 [&>button]:text-sidebar-foreground"
             >
-              <Menu className="size-5" />
-            </button>
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="flex w-72 flex-col gap-6 border-sidebar-border bg-sidebar p-0 py-6 [&>button]:text-sidebar-foreground"
-          >
-            {brand}
-            {nav(() => setMobileOpen(false))}
-            <div className="mt-auto">{userCard}</div>
-          </SheetContent>
-        </Sheet>
+              {brand}
+              {nav(() => setMobileOpen(false))}
+              <div className="mt-auto">{userCard}</div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       <main className="md:pl-64">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
-          {children}
-        </div>
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">{children}</div>
       </main>
     </div>
   );
