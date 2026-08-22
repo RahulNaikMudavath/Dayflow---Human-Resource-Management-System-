@@ -151,6 +151,7 @@ function EmployeeDetailPage() {
         <div className="flex flex-wrap items-center gap-5">
           <InitialsAvatar
             name={profile.full_name}
+            src={profile.avatar_url}
             className="size-16 rounded-2xl text-xl"
           />
           <div className="min-w-0 flex-1">
@@ -180,9 +181,7 @@ function EmployeeDetailPage() {
                 <i.icon className="size-3.5" />
                 {i.label}
               </p>
-              <p className="mt-1 truncate text-sm font-medium text-foreground">
-                {i.value}
-              </p>
+              <p className="mt-1 truncate text-sm font-medium text-foreground">{i.value}</p>
             </div>
           ))}
         </div>
@@ -190,9 +189,7 @@ function EmployeeDetailPage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Recent attendance
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Recent attendance</h2>
           <div className="mt-4 space-y-2.5">
             {(attendance ?? []).length === 0 && (
               <p className="py-4 text-center text-sm text-muted-foreground">
@@ -224,9 +221,7 @@ function EmployeeDetailPage() {
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Leave history
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">Leave history</h2>
             <div className="mt-4 space-y-2.5">
               {(leaves ?? []).length === 0 && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
@@ -265,9 +260,8 @@ function EmployeeDetailPage() {
                   {formatINR(netPay(salary))}
                 </p>
                 <p className="mt-1 text-sm text-sidebar-foreground/70">
-                  Basic {formatINR(salary.basic)} · HRA {formatINR(salary.hra)} ·
-                  Allowances {formatINR(salary.allowances)} · Deductions −
-                  {formatINR(salary.deductions)}
+                  Basic {formatINR(salary.basic)} · HRA {formatINR(salary.hra)} · Allowances{" "}
+                  {formatINR(salary.allowances)} · Deductions −{formatINR(salary.deductions)}
                 </p>
               </>
             ) : (

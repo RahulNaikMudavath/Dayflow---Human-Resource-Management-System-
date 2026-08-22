@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, format, startOfMonth, startOfWeek, subDays } from "date-fns";
@@ -7,9 +7,11 @@ import {
   CalendarCheck,
   Check,
   Clock,
+  LogOut,
   Palmtree,
   Timer,
   UserCheck,
+  UserRound,
   Users,
   Wallet,
 } from "lucide-react";
@@ -39,11 +41,7 @@ import {
 } from "@/lib/dayflow";
 import { useCurrentUser, type CurrentUser } from "@/hooks/use-current-user";
 import { CheckInCard } from "@/components/dayflow/check-in-card";
-import {
-  InitialsAvatar,
-  LeaveStatusBadge,
-  StatCard,
-} from "@/components/dayflow/bits";
+import { InitialsAvatar, LeaveStatusBadge, StatCard } from "@/components/dayflow/bits";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +70,33 @@ function greeting() {
   return "Good evening";
 }
 
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  to: string;
+  icon: typeof UserRound;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-lift transition-colors hover:border-primary/40 hover:bg-accent/50"
+    >
+      <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <Icon className="size-5" />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold text-foreground">{label}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+    </Link>
+  );
+}
+
 function DashboardPage() {
   const { data: me } = useCurrentUser();
 
@@ -95,8 +120,16 @@ function DashboardPage() {
 /* ------------------------------ Employee ------------------------------ */
 
 function EmployeeDashboard({ me }: { me: CurrentUser }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const today = new Date();
   const monthKey = format(startOfMonth(today), "yyyy-MM-dd");
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    queryClient.clear();
+    navigate({ to: "/auth" });
+  }
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const yearStart = format(new Date(today.getFullYear(), 0, 1), "yyyy-MM-dd");
 
@@ -164,9 +197,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
     .filter((l) => l.leave_type === "paid")
     .reduce((s, l) => s + leaveDayCount(l.start_date, l.end_date), 0);
 
-  const pendingCount = (myLeaves ?? []).filter(
-    (l) => l.status === "pending",
-  ).length;
+  const pendingCount = (myLeaves ?? []).filter((l) => l.status === "pending").length;
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -183,6 +214,40 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
       </div>
 
       <CheckInCard userId={me.id} />
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <QuickAction
+          to="/profile"
+          icon={UserRound}
+          label="Profile"
+          hint="View & edit your details"
+        />
+        <QuickAction
+          to="/attendance"
+          icon={CalendarCheck}
+          label="Attendance"
+          hint="Check-ins & history"
+        />
+        <QuickAction
+          to="/leave"
+          icon={Palmtree}
+          label="Leave requests"
+          hint="Apply & track time off"
+        />
+        <button
+          type="button"
+          onClick={signOut}
+          className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-lift transition-colors hover:border-destructive/40 hover:bg-destructive/5"
+        >
+          <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-destructive/10 group-hover:text-destructive">
+            <LogOut className="size-5" />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold text-foreground">Log out</span>
+            <span className="block text-xs text-muted-foreground">End your session</span>
+          </span>
+        </button>
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -214,9 +279,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              This week
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">This week</h2>
             <Link
               to="/attendance"
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -235,23 +298,16 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
                   key={key}
                   className={cn(
                     "flex flex-col items-center gap-2 rounded-xl border px-1 py-3",
-                    isToday
-                      ? "border-primary bg-accent/50"
-                      : "border-border bg-background",
+                    isToday ? "border-primary bg-accent/50" : "border-border bg-background",
                   )}
                 >
                   <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                     {format(d, "EEE")}
                   </span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {format(d, "d")}
-                  </span>
+                  <span className="text-sm font-semibold text-foreground">{format(d, "d")}</span>
                   {row ? (
                     <span
-                      className={cn(
-                        "size-2 rounded-full",
-                        ATTENDANCE_META[row.status].dot,
-                      )}
+                      className={cn("size-2 rounded-full", ATTENDANCE_META[row.status].dot)}
                       title={ATTENDANCE_META[row.status].label}
                     />
                   ) : (
@@ -281,9 +337,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Recent time off
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">Recent time off</h2>
             <Link
               to="/leave"
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -332,10 +386,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
   const { data: everyone } = useQuery({
     queryKey: ["profiles", "all"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const { data } = await supabase.from("profiles").select("*").order("full_name");
       return (data ?? []) as Profile[];
     },
   });
@@ -343,10 +394,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
   const { data: todayRows } = useQuery({
     queryKey: ["attendance", "day", today],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("attendance")
-        .select("*")
-        .eq("date", today);
+      const { data } = await supabase.from("attendance").select("*").eq("date", today);
       return (data ?? []) as AttendanceRow[];
     },
   });
@@ -367,7 +415,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("leave_requests")
-        .select("*, profiles(full_name, employee_id, department)")
+        .select("*, profiles(full_name, employee_id, department, avatar_url)")
         .eq("status", "pending")
         .order("created_at", { ascending: false });
       return (data ?? []) as unknown as LeaveRequest[];
@@ -425,9 +473,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
   const presentToday = (todayRows ?? []).filter(
     (r) => r.status === "present" || r.status === "half_day",
   ).length;
-  const onLeaveToday = (todayRows ?? []).filter(
-    (r) => r.status === "leave",
-  ).length;
+  const onLeaveToday = (todayRows ?? []).filter((r) => r.status === "leave").length;
 
   return (
     <div>
@@ -436,8 +482,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           {greeting()}, {me.profile?.full_name?.split(" ")[0] ?? "there"}.
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          {format(new Date(), "EEEE, dd MMMM yyyy")} · Here's how the team is
-          doing.
+          {format(new Date(), "EEEE, dd MMMM yyyy")} · Here's how the team is doing.
         </p>
       </div>
 
@@ -476,11 +521,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={{ left: -20, right: 8, top: 4 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--border)"
-                  vertical={false}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="label"
                   tickLine={false}
@@ -535,9 +576,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-2">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Team by department
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Team by department</h2>
           <div className="mt-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -609,6 +648,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
               <div className="flex items-center gap-3">
                 <InitialsAvatar
                   name={l.profiles?.full_name ?? "?"}
+                  src={l.profiles?.avatar_url}
                   className="size-9 text-xs"
                 />
                 <div>

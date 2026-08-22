@@ -16,6 +16,8 @@ export interface Profile {
   designation: string | null;
   date_of_joining: string | null;
   avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AttendanceRow {
@@ -38,7 +40,7 @@ export interface LeaveRequest {
   reviewer_comment: string | null;
   reviewed_by: string | null;
   created_at: string;
-  profiles?: Pick<Profile, "full_name" | "employee_id" | "department"> | null;
+  profiles?: Pick<Profile, "full_name" | "employee_id" | "department" | "avatar_url"> | null;
 }
 
 export interface SalaryStructure {
@@ -89,10 +91,7 @@ export const ATTENDANCE_META: Record<
   },
 };
 
-export const LEAVE_STATUS_META: Record<
-  LeaveStatus,
-  { label: string; badge: string }
-> = {
+export const LEAVE_STATUS_META: Record<LeaveStatus, { label: string; badge: string }> = {
   pending: {
     label: "Pending",
     badge: "bg-status-half/25 text-accent-foreground",

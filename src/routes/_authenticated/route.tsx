@@ -4,9 +4,22 @@ import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      throw redirect({ to: "/auth" });
+    try {
+      const { data } = await supabase.auth.getSession();
+      const hasDemoSession =
+        typeof window !== "undefined" && !!localStorage.getItem("dayflow_demo_session");
+      if (!data?.session && !hasDemoSession) {
+        throw redirect({ to: "/auth" });
+      }
+    } catch (err) {
+      if (err && typeof err === "object" && "to" in err) {
+        throw err;
+      }
+      const hasDemoSession =
+        typeof window !== "undefined" && !!localStorage.getItem("dayflow_demo_session");
+      if (!hasDemoSession) {
+        throw redirect({ to: "/auth" });
+      }
     }
   },
   component: AuthenticatedLayout,

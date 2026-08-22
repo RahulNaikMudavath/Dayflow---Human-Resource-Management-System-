@@ -4,11 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, ShieldAlert, Users } from "lucide-react";
 import { supabase, type Profile } from "@/lib/dayflow";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import {
-  EmptyState,
-  InitialsAvatar,
-  PageHeader,
-} from "@/components/dayflow/bits";
+import { EmptyState, InitialsAvatar, PageHeader } from "@/components/dayflow/bits";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,18 +33,13 @@ function EmployeesPage() {
     queryKey: ["profiles", "all"],
     enabled: !!me?.isAdmin,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
+      const { data } = await supabase.from("profiles").select("*").order("full_name");
       return (data ?? []) as Profile[];
     },
   });
 
   const departments = useMemo(
-    () => [
-      ...new Set((everyone ?? []).map((p) => p.department).filter(Boolean)),
-    ] as string[],
+    () => [...new Set((everyone ?? []).map((p) => p.department).filter(Boolean))] as string[],
     [everyone],
   );
 
@@ -122,23 +113,19 @@ function EmployeesPage() {
               className="group rounded-2xl border border-border bg-card p-5 shadow-lift transition-transform hover:-translate-y-0.5"
             >
               <div className="flex items-center gap-4">
-                <InitialsAvatar name={p.full_name} className="size-12 text-sm" />
+                <InitialsAvatar name={p.full_name} src={p.avatar_url} className="size-12 text-sm" />
                 <div className="min-w-0">
                   <p className="truncate font-display text-lg font-semibold text-foreground group-hover:text-primary">
                     {p.full_name}
                   </p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {p.designation ?? "—"}
-                  </p>
+                  <p className="truncate text-sm text-muted-foreground">{p.designation ?? "—"}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <span className="rounded-full bg-accent/60 px-2.5 py-1 text-xs font-semibold text-accent-foreground">
                   {p.department ?? "Unassigned"}
                 </span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {p.employee_id}
-                </span>
+                <span className="font-mono text-xs text-muted-foreground">{p.employee_id}</span>
               </div>
             </Link>
           ))}

@@ -11,17 +11,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  supabase,
-  formatINR,
-  netPay,
-  type SalaryStructure,
-} from "@/lib/dayflow";
+import { supabase, formatINR, netPay, type SalaryStructure } from "@/lib/dayflow";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import {
-  InitialsAvatar,
-  PageHeader,
-} from "@/components/dayflow/bits";
+import { InitialsAvatar, PageHeader } from "@/components/dayflow/bits";
 import { ProfileEditDialog } from "@/components/dayflow/profile-edit-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -83,10 +75,7 @@ function ProfilePage() {
 
   return (
     <div>
-      <PageHeader
-        title="My Profile"
-        description="Your details, as HR sees them."
-      >
+      <PageHeader title="My Profile" description="Your details, as HR sees them.">
         {profile && (
           <ProfileEditDialog
             profile={profile}
@@ -105,6 +94,7 @@ function ProfilePage() {
         <div className="flex flex-wrap items-center gap-5">
           <InitialsAvatar
             name={profile?.full_name ?? me.email}
+            src={profile?.avatar_url}
             className="size-20 rounded-3xl text-2xl"
           />
           <div>
@@ -123,9 +113,7 @@ function ProfilePage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-          <h3 className="font-display text-lg font-semibold text-foreground">
-            Job details
-          </h3>
+          <h3 className="font-display text-lg font-semibold text-foreground">Job details</h3>
           <dl className="mt-4 space-y-3.5">
             {jobDetails.map((d, i) => (
               <div key={i} className="flex items-center gap-3">
@@ -134,9 +122,7 @@ function ProfilePage() {
                 </span>
                 <div>
                   <dt className="text-xs text-muted-foreground">{d.label}</dt>
-                  <dd className="text-sm font-semibold text-foreground">
-                    {d.value}
-                  </dd>
+                  <dd className="text-sm font-semibold text-foreground">{d.value}</dd>
                 </div>
               </div>
             ))}
@@ -144,9 +130,7 @@ function ProfilePage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-          <h3 className="font-display text-lg font-semibold text-foreground">
-            Contact
-          </h3>
+          <h3 className="font-display text-lg font-semibold text-foreground">Contact</h3>
           <dl className="mt-4 space-y-3.5">
             {contact.map((d, i) => (
               <div key={i} className="flex items-center gap-3">
@@ -155,9 +139,7 @@ function ProfilePage() {
                 </span>
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{d.label}</dt>
-                  <dd className="truncate text-sm font-semibold text-foreground">
-                    {d.value}
-                  </dd>
+                  <dd className="truncate text-sm font-semibold text-foreground">{d.value}</dd>
                 </div>
               </div>
             ))}
@@ -178,9 +160,7 @@ function ProfilePage() {
                 {formatINR(netPay(salary))}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-sidebar-foreground/70">
-                Salary not configured yet.
-              </p>
+              <p className="mt-2 text-sm text-sidebar-foreground/70">Salary not configured yet.</p>
             )}
             <Link
               to="/payroll"
@@ -190,12 +170,10 @@ function ProfilePage() {
             </Link>
           </div>
           <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-            <h3 className="font-display text-lg font-semibold text-foreground">
-              Documents
-            </h3>
+            <h3 className="font-display text-lg font-semibold text-foreground">Documents</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Offer letters and payslips will live here — a Dayflow roadmap
-              item from the hackathon brief.
+              Offer letters and payslips will live here — a Dayflow roadmap item from the hackathon
+              brief.
             </p>
           </div>
         </div>
