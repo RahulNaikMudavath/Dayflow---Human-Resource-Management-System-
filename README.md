@@ -1,39 +1,42 @@
 # 🌅 Dayflow — Human Resource Management System (HRMS)
 
-> A modern, full-stack Human Resource Management platform designed to streamline employee workflows, attendance tracking, leave requests, payroll processing, and AI-assisted HR operations.
+> A modern, full-stack Human Resource Management platform designed to streamline employee workflows, attendance tracking, leave requests, payroll processing, AI-assisted HR operations, and 100% offline-first local storage resilience.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
+
+### 🌐 Offline-First & Local Database Engine
+- **Zero Cloud Reliance**: Built with a dedicated **Local Storage Database Engine** (`src/lib/dayflow-local-db.ts`) that persists employee profiles, attendance logs, leave applications, and payroll structures locally in browser storage.
+- **Offline Operations**: Check-ins, leave requests, profile updates, and salary edits function seamlessly even when disconnected from internet or cloud infrastructure.
 
 ### 🔐 Authentication & Access Control
 - **Role-Based Access Control (RBAC)**: Support for Administrators, HR Managers, and Standard Employees.
-- **Secure Authentication**: Integrated with Supabase Auth (Email/Password, Session management).
+- **Secure Authentication**: Integrated with Supabase Auth (Email/Password, Session management) and instant local token validation.
 - **Protected Routes**: Enforced server-side and client-side authentication guards using TanStack Start routes.
 
 ### ⏱️ Attendance & Time Tracking
-- **Smart Check-In / Check-Out**: One-click daily attendance logging with automatic timestamping and status badges (Present, Late, Half-day).
+- **Smart Check-In / Check-Out**: One-click daily attendance logging with automatic timestamping and status badges (Present, Late, Half-day, On leave).
 - **Time Breakdown**: Track working hours, break durations, and overtime.
-- **Monthly Attendance Logs**: Comprehensive calendar and table views for attendance history.
+- **Monthly & Weekly Logs**: Comprehensive 42-day calendar matrix and 7-day weekly time logger.
+- **Weekly PDF Export**: Download itemized weekly attendance reports as PDF documents.
 
 ### 👥 Employee Management
 - **Centralized Directory**: Search, filter, and view employee profiles by department, designation, and status.
 - **Detailed Profiles**: Manage personal details, contact info, job role, joining date, emergency contacts, and salary info.
-- **Profile Updates**: Direct edit dialogs for employees to keep their contact and personal information up to date.
+- **Profile Editor**: Modal dialog for editing employee information with automatic 256px WebP avatar image cropping.
 
 ### 🏖️ Leave Management System
-- **Leave Applications**: Request time off for Paid, Sick, Casual, or Unpaid leaves with reason notes.
-- **Approval Workflow**: Dedicated HR/Admin approval and rejection interface.
-- **Leave Balance Tracking**: Real-time quotas and remaining leave counters.
+- **Leave Applications**: Request time off for Paid (12d), Sick (6d), or Unpaid (30d) leaves with reason notes and automatic working-day calculations.
+- **Approval Workflow**: Dedicated HR/Admin approval and rejection interface with reviewer feedback.
 
 ### 💰 Payroll & Payslips
-- **Salary Processing**: View base salary, allowances, overtime pay, and tax/PF deductions.
-- **Payslip Generator**: Downloadable PDF payslips with formatted itemized breakdowns.
-- **Payroll Statuses**: Track processed vs. pending payroll cycles.
+- **Salary Processing**: View base salary, HRA, allowances, overtime pay, and tax/PF deductions.
+- **Payslip Generator**: Downloadable itemized PDF payslips generated using client-side rendering.
+- **Payroll Control**: HR Admin dashboard for managing company-wide salary structures.
 
 ### 🤖 AI HR Assistant
-- **Conversational Intelligence**: Ask questions about HR policies, leave balances, or company guidelines.
-- **Fast Lookup**: Query employee data and quick statistics via natural language.
+- **Conversational Intelligence**: Ask policy questions, leave balances, or company guidelines via natural language.
 
 ---
 
@@ -45,9 +48,9 @@
 | **Language** | [TypeScript](https://www.typescriptlang.org/) |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
-| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL, RLS, Auth) |
+| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL, RLS, Auth) + Local DB Engine |
 | **Build Tool** | [Vite](https://vitejs.dev/) |
-| **PDF Generation** | Custom Canvas / jsPDF Export Engine |
+| **PDF Generation** | Custom HTML Canvas / jsPDF Export Engine |
 
 ---
 
@@ -57,18 +60,19 @@
 FINALREPT/
 ├── src/
 │   ├── components/         # Reusable UI components & Dayflow feature modules
-│   │   ├── dayflow/        # HRMS specific widgets (check-in, profile dialogs, notifications)
+│   │   ├── dayflow/        # HRMS widgets (check-in, profile dialogs, notifications)
 │   │   └── ui/             # Design system components (Buttons, Dialogs, Cards, Tables)
-│   ├── hooks/              # React hooks (e.g. useCurrentUser)
+│   ├── hooks/              # Custom React hooks (e.g. useCurrentUser)
 │   ├── integrations/       # Supabase client setup, Auth middleware, RLS policies
-│   ├── lib/                # Utilities, AI gateway, PDF export functions
+│   ├── lib/                # Utilities, AI gateway, PDF exporter, Dayflow Local DB
+│   │   └── dayflow-local-db.ts  # Offline Local Storage Database Engine
 │   └── routes/             # TanStack Start file-based router
-│       ├── _authenticated/ # Protected HR dashboard pages (attendance, leave, payroll, employees)
+│       ├── _authenticated/ # HR dashboard pages (attendance, leave, payroll, employees)
 │       ├── api/            # API endpoints (AI Assistant backend)
 │       ├── auth.tsx        # Auth login/signup page
 │       └── index.tsx       # Landing page
 ├── supabase/
-│   └── migrations/         # SQL schema definitions & database migrations
+│   └── migrations/         # SQL schema definitions & PostgreSQL database migrations
 ├── package.json
 └── vite.config.ts
 ```
@@ -91,7 +95,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 ### 3. Installation
-Install the project dependencies:
+Install project dependencies:
 
 ```bash
 npm install
@@ -104,14 +108,22 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or the port indicated in terminal) to view the application in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 5. Production Build
+Verify the production bundle:
+
+```bash
+npm run build
+```
 
 ---
 
-## 🤝 Repository & Contributing
+## 👨‍💻 Author & Repository
 
+- **Author**: Pranav Hiremath ([pranavhiremath7777@gmail.com](mailto:pranavhiremath7777@gmail.com))
 - **Repository**: [RahulNaikMudavath/Dayflow---Human-Resource-Management-System-](https://github.com/RahulNaikMudavath/Dayflow---Human-Resource-Management-System-)
-- **Branch**: `prajwalbranch`
+- **Branch**: `pranav`
 
 ---
 
