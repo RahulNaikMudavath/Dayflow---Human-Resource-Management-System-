@@ -486,7 +486,17 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
     queryKey: ["attendance", "day", today],
     queryFn: async () => {
       const { data } = await supabase.from("attendance").select("*").eq("date", today);
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES.map((p, idx) => ({
+          id: `demo-att-today-${p.id}`,
+          user_id: p.id,
+          date: today,
+          check_in: `${today}T09:15:00.000Z`,
+          check_out: idx % 2 === 0 ? `${today}T17:30:00.000Z` : null,
+          status: (idx === 3 ? "leave" : idx === 4 ? "half_day" : "present") as AttendanceRow["status"],
+        }));
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -497,7 +507,22 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         .from("attendance")
         .select("user_id, date, status")
         .gte("date", fourteenAgo);
-      return (data ?? []) as Pick<AttendanceRow, "user_id" | "date" | "status">[];
+      if (!data || data.length === 0) {
+        const rows: Pick<AttendanceRow, "user_id" | "date" | "status">[] = [];
+        for (let i = 0; i < 14; i++) {
+          const d = subDays(new Date(), i);
+          const dateStr = format(d, "yyyy-MM-dd");
+          DEMO_PROFILES.forEach((p, idx) => {
+            rows.push({
+              user_id: p.id,
+              date: dateStr,
+              status: ((i + idx) % 5 === 0 ? "leave" : (i + idx) % 7 === 0 ? "half_day" : "present") as AttendanceRow["status"],
+            });
+          });
+        }
+        return rows;
+      }
+      return data as Pick<AttendanceRow, "user_id" | "date" | "status">[];
     },
   });
 
@@ -509,7 +534,47 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         .select("*, profiles(full_name, employee_id, department, avatar_url)")
         .eq("status", "pending")
         .order("created_at", { ascending: false });
-      return (data ?? []) as unknown as LeaveRequest[];
+      if (!data || data.length === 0) {
+        return [
+          {
+            id: "demo-pending-1",
+            user_id: "demo-emp-2",
+            leave_type: "paid" as const,
+            start_date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
+            end_date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
+            remarks: "Vacation trip",
+            status: "pending" as const,
+            reviewer_comment: null,
+            reviewed_by: null,
+            created_at: new Date().toISOString(),
+            profiles: {
+              full_name: "Priya Sharma",
+              employee_id: "DF-002",
+              department: "Engineering",
+              avatar_url: null,
+            },
+          },
+          {
+            id: "demo-pending-2",
+            user_id: "demo-emp-4",
+            leave_type: "sick" as const,
+            start_date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+            end_date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+            remarks: "Doctor appointment",
+            status: "pending" as const,
+            reviewer_comment: null,
+            reviewed_by: null,
+            created_at: new Date().toISOString(),
+            profiles: {
+              full_name: "Ananya Iyer",
+              employee_id: "DF-004",
+              department: "Design",
+              avatar_url: null,
+            },
+          },
+        ] as unknown as LeaveRequest[];
+      }
+      return data as unknown as LeaveRequest[];
     },
   });
 

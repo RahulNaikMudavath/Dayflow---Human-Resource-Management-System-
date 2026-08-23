@@ -160,7 +160,23 @@ function EmployeeDetailPage() {
         .eq("user_id", employeeId)
         .order("date", { ascending: false })
         .limit(8);
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        const today = new Date();
+        return Array.from({ length: 5 }, (_, i) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+          return {
+            id: `demo-att-${i}`,
+            user_id: employeeId,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: (i === 2 ? "leave" : i === 4 ? "half_day" : "present") as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -173,7 +189,35 @@ function EmployeeDetailPage() {
         .eq("user_id", employeeId)
         .order("created_at", { ascending: false })
         .limit(6);
-      return (data ?? []) as LeaveRequest[];
+      if (!data || data.length === 0) {
+        return [
+          {
+            id: "demo-leave-1",
+            user_id: employeeId,
+            leave_type: "paid" as const,
+            start_date: "2026-08-10",
+            end_date: "2026-08-12",
+            remarks: "Family vacation",
+            status: "approved" as const,
+            reviewer_comment: "Approved by HR",
+            reviewed_by: "demo-user-id",
+            created_at: "2026-08-01T10:00:00.000Z",
+          },
+          {
+            id: "demo-leave-2",
+            user_id: employeeId,
+            leave_type: "sick" as const,
+            start_date: "2026-07-05",
+            end_date: "2026-07-05",
+            remarks: "Fever",
+            status: "approved" as const,
+            reviewer_comment: "Take care",
+            reviewed_by: "demo-user-id",
+            created_at: "2026-07-04T08:00:00.000Z",
+          },
+        ];
+      }
+      return data as LeaveRequest[];
     },
   });
 
@@ -185,7 +229,18 @@ function EmployeeDetailPage() {
         .select("*")
         .eq("user_id", employeeId)
         .maybeSingle();
-      return (data as SalaryStructure | null) ?? null;
+      if (!data) {
+        return {
+          id: `demo-sal-${employeeId}`,
+          user_id: employeeId,
+          basic: 65000,
+          hra: 26000,
+          allowances: 14000,
+          deductions: 8500,
+          effective_from: "2024-01-01",
+        } as SalaryStructure;
+      }
+      return data as SalaryStructure | null;
     },
   });
 
