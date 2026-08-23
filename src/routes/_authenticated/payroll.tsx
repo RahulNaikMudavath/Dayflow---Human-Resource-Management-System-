@@ -213,10 +213,10 @@ const DEMO_SALARIES: SalaryWithProfile[] = [
     deductions: 11000,
     effective_from: "2024-01-01",
     profiles: {
-      full_name: "Aarav Mehta",
+      full_name: "Pranav Hiremath",
       employee_id: "DF-001",
       department: "People Ops",
-      designation: "Head of People",
+      designation: "Head of HR & Operations",
       avatar_url: null,
     },
   },
