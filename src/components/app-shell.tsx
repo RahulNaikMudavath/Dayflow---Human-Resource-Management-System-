@@ -48,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const items = NAV_ITEMS.filter((i) => !i.adminOnly || me?.isAdmin);
 
   async function signOut() {
+    localStorage.removeItem("dayflow_demo_session");
     await supabase.auth.signOut();
     queryClient.clear();
     navigate({ to: "/auth" });

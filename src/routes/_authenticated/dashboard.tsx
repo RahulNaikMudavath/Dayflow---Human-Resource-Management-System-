@@ -126,6 +126,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   const monthKey = format(startOfMonth(today), "yyyy-MM-dd");
 
   async function signOut() {
+    localStorage.removeItem("dayflow_demo_session");
     await supabase.auth.signOut();
     queryClient.clear();
     navigate({ to: "/auth" });
