@@ -18,6 +18,7 @@ import { supabase } from "@/lib/dayflow";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { InitialsAvatar } from "@/components/dayflow/bits";
 import { NotificationBell } from "@/components/dayflow/notification-bell";
+import { FloatingChatbot } from "@/components/dayflow/floating-chatbot";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -162,6 +163,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="md:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">{children}</div>
       </main>
+
+      {/* Floating AI Chatbot — visible on all authenticated pages */}
+      <FloatingChatbot />
     </div>
   );
 }
