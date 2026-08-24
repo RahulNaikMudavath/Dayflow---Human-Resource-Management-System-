@@ -1,6 +1,16 @@
 # 🌅 Dayflow — Human Resource Management System (HRMS)
 
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://dayflow-hrms-rose.vercel.app/)
+
 > A modern, full-stack Human Resource Management platform designed to streamline employee workflows, attendance tracking, leave requests, payroll processing, AI-assisted HR operations, and 100% offline-first local storage resilience.
+
+---
+
+## 🌐 Live Deployment
+
+> **Deployed on Vercel** — No installation required!
+
+🔗 **[https://dayflow-hrms-rose.vercel.app/](https://dayflow-hrms-rose.vercel.app/)**
 
 ---
 
@@ -124,6 +134,7 @@ npm run build
 - **Author**: Pranav Hiremath ([pranavhiremath7777@gmail.com](mailto:pranavhiremath7777@gmail.com))
 - **Repository**: [RahulNaikMudavath/Dayflow---Human-Resource-Management-System-](https://github.com/RahulNaikMudavath/Dayflow---Human-Resource-Management-System-)
 - **Branch**: `pranav`
+- **Live Deployment**: [https://dayflow-hrms-rose.vercel.app/](https://dayflow-hrms-rose.vercel.app/)
 
 ---
 
