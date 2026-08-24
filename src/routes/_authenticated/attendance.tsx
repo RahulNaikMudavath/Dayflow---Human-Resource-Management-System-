@@ -82,7 +82,23 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
         .gte("date", rangeStart)
         .lte("date", rangeEnd)
         .order("date");
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        const today = new Date();
+        return Array.from({ length: 20 }, (_, i) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = format(d, "yyyy-MM-dd");
+          return {
+            id: `demo-att-mine-${dateStr}`,
+            user_id: me.id,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: (i === 3 ? "leave" : i === 7 ? "half_day" : "present") as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -125,7 +141,20 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
         .gte("date", weekStartKey)
         .lte("date", format(addDays(weekStart, 6), "yyyy-MM-dd"))
         .order("date");
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        return weekDays.slice(0, 5).map((d) => {
+          const dateStr = format(d, "yyyy-MM-dd");
+          return {
+            id: `demo-att-week-${dateStr}`,
+            user_id: me.id,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: "present" as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -366,16 +395,106 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
   );
 }
 
+const DEMO_PROFILES: Profile[] = [
+  {
+    id: "demo-user-id",
+    employee_id: "DF-001",
+    full_name: "Pranav Hiremath",
+    email: "pranavhiremath7777@gmail.com",
+    phone: "+91 98220 41102",
+    address: "Bengaluru, India",
+    department: "People Ops",
+    designation: "Head of HR & Operations",
+    date_of_joining: "2022-01-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-2",
+    employee_id: "DF-002",
+    full_name: "Priya Sharma",
+    email: "priya@dayflow.io",
+    phone: "+91 98765 43210",
+    address: "Mumbai, India",
+    department: "Engineering",
+    designation: "Senior Engineer",
+    date_of_joining: "2022-03-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-3",
+    employee_id: "DF-003",
+    full_name: "Rahul Verma",
+    email: "rahul@dayflow.io",
+    phone: "+91 91234 56789",
+    address: "Delhi, India",
+    department: "Sales",
+    designation: "Sales Director",
+    date_of_joining: "2023-01-10",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-4",
+    employee_id: "DF-004",
+    full_name: "Ananya Iyer",
+    email: "ananya@dayflow.io",
+    phone: "+91 99887 76655",
+    address: "Chennai, India",
+    department: "Design",
+    designation: "Lead UI/UX Designer",
+    date_of_joining: "2023-05-20",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-5",
+    employee_id: "DF-005",
+    full_name: "Rohan Kapoor",
+    email: "rohan@dayflow.io",
+    phone: "+91 95544 33221",
+    address: "Hyderabad, India",
+    department: "Marketing",
+    designation: "Marketing Specialist",
+    date_of_joining: "2023-08-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-6",
+    employee_id: "DF-006",
+    full_name: "Neha Gupta",
+    email: "neha@dayflow.io",
+    phone: "+91 94433 22110",
+    address: "Pune, India",
+    department: "Finance",
+    designation: "Financial Analyst",
+    date_of_joining: "2023-11-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 /* -------------------------------- Admin ------------------------------- */
 
 function AdminAttendance() {
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const { data: everyone } = useQuery({
+  const { data: everyone = DEMO_PROFILES } = useQuery({
     queryKey: ["profiles", "all"],
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("*").order("full_name");
-      return (data ?? []) as Profile[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES;
+      }
+      return data as Profile[];
     },
   });
 
@@ -383,7 +502,17 @@ function AdminAttendance() {
     queryKey: ["attendance", "day", date],
     queryFn: async () => {
       const { data } = await supabase.from("attendance").select("*").eq("date", date);
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES.map((p, idx) => ({
+          id: `demo-att-${p.id}-${date}`,
+          user_id: p.id,
+          date,
+          check_in: `${date}T09:15:00.000Z`,
+          check_out: idx % 2 === 0 ? `${date}T17:30:00.000Z` : null,
+          status: (idx === 3 ? "leave" : idx === 4 ? "half_day" : "present") as AttendanceRow["status"],
+        }));
+      }
+      return data as AttendanceRow[];
     },
   });
 

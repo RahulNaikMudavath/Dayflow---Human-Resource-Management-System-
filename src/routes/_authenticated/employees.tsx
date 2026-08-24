@@ -24,17 +24,107 @@ export const Route = createFileRoute("/_authenticated/employees")({
   component: EmployeesPage,
 });
 
+const DEMO_PROFILES: Profile[] = [
+  {
+    id: "demo-user-id",
+    employee_id: "DF-001",
+    full_name: "Pranav Hiremath",
+    email: "pranavhiremath7777@gmail.com",
+    phone: "+91 98220 41102",
+    address: "Bengaluru, India",
+    department: "People Ops",
+    designation: "Head of HR & Operations",
+    date_of_joining: "2022-01-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-2",
+    employee_id: "DF-002",
+    full_name: "Priya Sharma",
+    email: "priya@dayflow.io",
+    phone: "+91 98765 43210",
+    address: "Mumbai, India",
+    department: "Engineering",
+    designation: "Senior Engineer",
+    date_of_joining: "2022-03-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-3",
+    employee_id: "DF-003",
+    full_name: "Rahul Verma",
+    email: "rahul@dayflow.io",
+    phone: "+91 91234 56789",
+    address: "Delhi, India",
+    department: "Sales",
+    designation: "Sales Director",
+    date_of_joining: "2023-01-10",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-4",
+    employee_id: "DF-004",
+    full_name: "Ananya Iyer",
+    email: "ananya@dayflow.io",
+    phone: "+91 99887 76655",
+    address: "Chennai, India",
+    department: "Design",
+    designation: "Lead UI/UX Designer",
+    date_of_joining: "2023-05-20",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-5",
+    employee_id: "DF-005",
+    full_name: "Rohan Kapoor",
+    email: "rohan@dayflow.io",
+    phone: "+91 95544 33221",
+    address: "Hyderabad, India",
+    department: "Marketing",
+    designation: "Marketing Specialist",
+    date_of_joining: "2023-08-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-6",
+    employee_id: "DF-006",
+    full_name: "Neha Gupta",
+    email: "neha@dayflow.io",
+    phone: "+91 94433 22110",
+    address: "Pune, India",
+    department: "Finance",
+    designation: "Financial Analyst",
+    date_of_joining: "2023-11-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 function EmployeesPage() {
   const { data: me } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("all");
 
-  const { data: everyone } = useQuery({
+  const { data: everyone = DEMO_PROFILES } = useQuery({
     queryKey: ["profiles", "all"],
     enabled: !!me?.isAdmin,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("*").order("full_name");
-      return (data ?? []) as Profile[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES;
+      }
+      return data as Profile[];
     },
   });
 

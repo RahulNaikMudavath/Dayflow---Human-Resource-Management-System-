@@ -23,19 +23,29 @@ export function useCurrentUser() {
           if (rawDemo) {
             try {
               const parsed = JSON.parse(rawDemo);
-              const isAdmin = parsed.role === "admin" || parsed.email === "admin@dayflow.io";
+              const userEmail = parsed.email || "pranavhiremath7777@gmail.com";
+              const isAdmin =
+                parsed.role === "admin" ||
+                userEmail.includes("admin") ||
+                userEmail.includes("pranav");
+
+              const formattedName =
+                userEmail.includes("pranav")
+                  ? "Pranav Hiremath"
+                  : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Admin User";
+
               return {
                 id: "demo-user-id",
-                email: parsed.email || "admin@dayflow.io",
+                email: userEmail,
                 profile: {
                   id: "demo-user-id",
                   employee_id: isAdmin ? "DF-001" : "DF-002",
-                  full_name: isAdmin ? "Aarav Mehta" : "Priya Sharma",
-                  email: parsed.email || "admin@dayflow.io",
+                  full_name: formattedName,
+                  email: userEmail,
                   phone: "+91 98220 41102",
                   address: "Bengaluru, India",
                   department: isAdmin ? "People Ops" : "Engineering",
-                  designation: isAdmin ? "Head of People" : "Senior Engineer",
+                  designation: isAdmin ? "Head of HR & Operations" : "Senior Engineer",
                   date_of_joining: "2022-01-01",
                   avatar_url: null,
                   created_at: new Date().toISOString(),

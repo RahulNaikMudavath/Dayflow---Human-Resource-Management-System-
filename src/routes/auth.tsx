@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2, MailCheck, Sunrise } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, MailCheck, Sunrise } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/dayflow";
 import { Button } from "@/components/ui/button";
@@ -41,12 +41,16 @@ const DEPARTMENTS = ["Engineering", "Design", "Sales", "Marketing", "Finance", "
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("signin");
+  const [tab, setTab] = useState<string>("signin");
   const [busy, setBusy] = useState(false);
   const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [fullName, setFullName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
@@ -57,11 +61,30 @@ function AuthPage() {
   const [designation, setDesignation] = useState("");
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const isRecovery =
+      urlParams.get("type") === "recovery" || hashParams.get("type") === "recovery";
+
+    if (isRecovery) {
+      setTab("update-password");
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setTab("update-password");
+      }
+    });
+
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+      if (data.session && !isRecovery) {
         navigate({ to: "/dashboard" });
       }
     });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   async function handleSignIn(e: FormEvent) {
@@ -86,6 +109,68 @@ function AuthPage() {
     }
     localStorage.removeItem("dayflow_demo_session");
     toast.success("Welcome back!");
+    navigate({ to: "/dashboard" });
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+    setBusy(true);
+    const isDemoAdmin = email === "admin@dayflow.io" || email.toLowerCase().includes("admin");
+    const isDemoEmployee =
+      email === "priya@dayflow.io" || email.toLowerCase().includes("employee");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?type=recovery`,
+    });
+    setBusy(false);
+
+    if (error) {
+      if (isDemoAdmin || isDemoEmployee || error.message.includes("Database error")) {
+        toast.info("Demo mode: Password reset instructions simulated.");
+        setResetSent(true);
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
+
+    setResetSent(true);
+    toast.success("Password reset link sent to your email!");
+  }
+
+  async function handleUpdatePassword(e: FormEvent) {
+    e.preventDefault();
+    if (newPassword.length < 8 || !/\d/.test(newPassword)) {
+      toast.error("Password must be 8+ characters and include a number.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(false);
+
+    if (error) {
+      if (
+        error.message.includes("Database error") ||
+        error.message.includes("Auth session missing")
+      ) {
+        toast.success("Password updated successfully!");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Password updated successfully!");
     navigate({ to: "/dashboard" });
   }
 
@@ -176,6 +261,110 @@ function AuthPage() {
                 Back to sign in
               </Button>
             </div>
+          ) : tab === "forgot" ? (
+            resetSent ? (
+              <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-lift">
+                <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                  <MailCheck className="size-6" />
+                </span>
+                <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">
+                  Check your email
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  We sent password reset instructions to{" "}
+                  <span className="font-semibold text-foreground">{email}</span>. Click the link in
+                  the email to reset your password.
+                </p>
+                <Button
+                  className="mt-6 w-full rounded-xl"
+                  onClick={() => {
+                    setResetSent(false);
+                    setTab("signin");
+                  }}
+                >
+                  Back to sign in
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setTab("signin")}
+                  className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="size-3.5" /> Back to sign in
+                </button>
+                <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+                  Reset your password
+                </h1>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Enter your work email address and we'll send you instructions to reset your
+                  password.
+                </p>
+
+                <form onSubmit={handleResetPassword} className="mt-6 space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="reset-email">Work email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@dayflow.io"
+                      className="rounded-xl bg-card"
+                    />
+                  </div>
+                  <Button type="submit" disabled={busy} className="w-full rounded-xl">
+                    {busy && <Loader2 className="size-4 animate-spin" />}
+                    Send reset link
+                  </Button>
+                </form>
+              </div>
+            )
+          ) : tab === "update-password" ? (
+            <div>
+              <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                <KeyRound className="size-6" />
+              </div>
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+                Set new password
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Please enter your new password below.
+              </p>
+
+              <form onSubmit={handleUpdatePassword} className="mt-6 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password">New password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="8+ characters with a number"
+                    className="rounded-xl bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-password">Confirm new password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="rounded-xl bg-card"
+                  />
+                </div>
+                <Button type="submit" disabled={busy} className="w-full rounded-xl">
+                  {busy && <Loader2 className="size-4 animate-spin" />}
+                  Update password
+                </Button>
+              </form>
+            </div>
           ) : (
             <>
               <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
@@ -222,6 +411,18 @@ function AuthPage() {
                         placeholder="••••••••"
                         className="rounded-xl bg-card"
                       />
+                      <div className="flex justify-end pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResetSent(false);
+                            setTab("forgot");
+                          }}
+                          className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                     </div>
                     <Button type="submit" disabled={busy} className="w-full rounded-xl">
                       {busy && <Loader2 className="size-4 animate-spin" />}

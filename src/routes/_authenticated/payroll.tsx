@@ -65,7 +65,18 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
         .select("*")
         .eq("user_id", me.id)
         .maybeSingle();
-      return (data as SalaryStructure | null) ?? null;
+      if (!data) {
+        return {
+          id: `demo-sal-${me.id}`,
+          user_id: me.id,
+          basic: 65000,
+          hra: 26000,
+          allowances: 14000,
+          deductions: 8500,
+          effective_from: "2024-01-01",
+        } as SalaryStructure;
+      }
+      return data as SalaryStructure | null;
     },
   });
 
@@ -192,6 +203,105 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   );
 }
 
+const DEMO_SALARIES: SalaryWithProfile[] = [
+  {
+    id: "demo-sal-1",
+    user_id: "demo-user-id",
+    basic: 85000,
+    hra: 34000,
+    allowances: 18000,
+    deductions: 11000,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Pranav Hiremath",
+      employee_id: "DF-001",
+      department: "People Ops",
+      designation: "Head of HR & Operations",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-2",
+    user_id: "demo-emp-2",
+    basic: 70000,
+    hra: 28000,
+    allowances: 15000,
+    deductions: 9200,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Priya Sharma",
+      employee_id: "DF-002",
+      department: "Engineering",
+      designation: "Senior Engineer",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-3",
+    user_id: "demo-emp-3",
+    basic: 75000,
+    hra: 30000,
+    allowances: 16000,
+    deductions: 9800,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Rahul Verma",
+      employee_id: "DF-003",
+      department: "Sales",
+      designation: "Sales Director",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-4",
+    user_id: "demo-emp-4",
+    basic: 68000,
+    hra: 27200,
+    allowances: 14000,
+    deductions: 8900,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Ananya Iyer",
+      employee_id: "DF-004",
+      department: "Design",
+      designation: "Lead UI/UX Designer",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-5",
+    user_id: "demo-emp-5",
+    basic: 55000,
+    hra: 22000,
+    allowances: 11000,
+    deductions: 7200,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Rohan Kapoor",
+      employee_id: "DF-005",
+      department: "Marketing",
+      designation: "Marketing Specialist",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-6",
+    user_id: "demo-emp-6",
+    basic: 60000,
+    hra: 24000,
+    allowances: 12000,
+    deductions: 7800,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Neha Gupta",
+      employee_id: "DF-006",
+      department: "Finance",
+      designation: "Financial Analyst",
+      avatar_url: null,
+    },
+  },
+];
+
 /* -------------------------------- Admin ------------------------------- */
 
 function AdminPayroll({ me }: { me: CurrentUser }) {
@@ -199,14 +309,17 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
   const [editing, setEditing] = useState<SalaryWithProfile | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const { data: salaries } = useQuery({
+  const { data: salaries = DEMO_SALARIES } = useQuery({
     queryKey: ["payroll", "all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("salary_structures")
         .select("*, profiles(full_name, employee_id, department, designation, avatar_url)")
         .order("basic", { ascending: false });
-      return (data ?? []) as unknown as SalaryWithProfile[];
+      if (!data || data.length === 0) {
+        return DEMO_SALARIES;
+      }
+      return data as unknown as SalaryWithProfile[];
     },
   });
 
