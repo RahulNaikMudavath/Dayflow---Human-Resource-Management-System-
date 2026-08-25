@@ -1,5 +1,13 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
+  "include": [
+    "client/**/*.ts",
+    "client/**/*.tsx",
+    "server/**/*.ts",
+    "server/**/*.tsx",
+    "database/**/*.ts",
+    "vite.config.ts",
+    "eslint.config.js"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -24,7 +32,12 @@
     "exactOptionalPropertyTypes": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./client/*"],
+      "@client/*": ["./client/*"],
+      "@server/*": ["./server/*"],
+      "@database/*": ["./database/*"],
+      "@components/*": ["./client/components/*"],
+      "@hooks/*": ["./client/hooks/*"]
     }
   }
 }

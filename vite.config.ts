@@ -1,16 +1,42 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
-    tsconfigPaths(),
     tanstackStart({
-      server: { entry: "server" },
+      srcDirectory: "client",
+      router: {
+        routesDirectory: "routes",
+        generatedRouteTree: "routeTree.gen.ts",
+      },
+      server: { entry: "server/index" },
     }),
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        chunkFileNames: (chunkInfo) => {
+          let name = chunkInfo.name;
+          if (name === "dist" || name.startsWith("dist-") || name === "index") {
+            const ids = chunkInfo.moduleIds || [];
+            const radixPkg = ids.find((id) => id.includes("@radix-ui"));
+            if (radixPkg) {
+              const match = radixPkg.match(/@radix-ui\/react-([^\/]+)/);
+              name = match ? `radix-${match[1]}` : "radix-ui";
+            } else {
+              name = "vendor";
+            }
+          }
+          return `assets/${name}-[hash].js`;
+        },
+      },
+    },
+  },
 });
