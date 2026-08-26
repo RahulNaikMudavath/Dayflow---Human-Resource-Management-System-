@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Check, Loader2, Palmtree, Plus, X } from "lucide-react";
@@ -46,6 +46,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/leave")({
+  validateSearch: (search: Record<string, unknown>): { apply?: true } =>
+    search["apply"] === true || search["apply"] === "true" ? { apply: true } : {},
   head: () => ({
     meta: [
       { title: "Time Off — Dayflow" },
@@ -70,16 +72,29 @@ function LeavePage() {
 
 function ApplyLeaveDialog({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
+  const search = useSearch({ from: "/_authenticated/leave" });
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<LeaveType>("paid");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  // Opened from an AI assistant quick action (/leave?apply=true) — show the
+  // dialog immediately, then clear the param so refresh/back doesn't reopen it.
+  useEffect(() => {
+    if (search.apply) {
+      setOpen(true);
+      void navigate({ to: "/leave", search: {}, replace: true });
+    }
+  }, [search.apply, navigate]);
+
   const apply = useMutation({
     mutationFn: async () => {
       if (!start || !end) throw new Error("Pick a start and end date.");
       if (end < start) throw new Error("End date can't be before start date.");
+      const days = leaveDayCount(start, end);
+      if (days === 0) throw new Error("That range only covers weekend days.");
       await createLeaveRequestAndNotify({
         userId,
         leaveType: type,
@@ -112,12 +127,8 @@ function ApplyLeaveDialog({ userId }: { userId: string }) {
       </DialogTrigger>
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">
-            Apply for leave
-          </DialogTitle>
-          <DialogDescription>
-            Your request goes straight to HR for review.
-          </DialogDescription>
+          <DialogTitle className="font-display text-xl">Apply for leave</DialogTitle>
+          <DialogDescription>Your request goes straight to HR for review.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -155,8 +166,7 @@ function ApplyLeaveDialog({ userId }: { userId: string }) {
           </div>
           {days > 0 && (
             <p className="rounded-xl bg-accent/60 px-4 py-2.5 text-sm font-medium text-accent-foreground">
-              {days} working day{days === 1 ? "" : "s"} of{" "}
-              {LEAVE_TYPE_LABEL[type].toLowerCase()}
+              {days} working day{days === 1 ? "" : "s"} of {LEAVE_TYPE_LABEL[type].toLowerCase()}
             </p>
           )}
           <div className="space-y-1.5">
@@ -170,11 +180,7 @@ function ApplyLeaveDialog({ userId }: { userId: string }) {
           </div>
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => apply.mutate()}
-            disabled={apply.isPending}
-            className="rounded-xl"
-          >
+          <Button onClick={() => apply.mutate()} disabled={apply.isPending} className="rounded-xl">
             {apply.isPending && <Loader2 className="size-4 animate-spin" />}
             Submit request
           </Button>
@@ -206,12 +212,7 @@ function EmployeeLeave({ me }: { me: CurrentUser }) {
 
   const usedBy = (type: LeaveType) =>
     (myLeaves ?? [])
-      .filter(
-        (l) =>
-          l.leave_type === type &&
-          l.status === "approved" &&
-          l.start_date >= yearStart,
-      )
+      .filter((l) => l.leave_type === type && l.status === "approved" && l.start_date >= yearStart)
       .reduce((s, l) => s + leaveDayCount(l.start_date, l.end_date), 0);
 
   return (
@@ -229,10 +230,7 @@ function EmployeeLeave({ me }: { me: CurrentUser }) {
           const total = LEAVE_ALLOWANCE[t];
           const pct = Math.min((used / total) * 100, 100);
           return (
-            <div
-              key={t}
-              className="rounded-2xl border border-border bg-card p-5 shadow-lift"
-            >
+            <div key={t} className="rounded-2xl border border-border bg-card p-5 shadow-lift">
               <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {LEAVE_TYPE_LABEL[t]}
               </p>
@@ -248,9 +246,7 @@ function EmployeeLeave({ me }: { me: CurrentUser }) {
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {used} used this year
-              </p>
+              <p className="mt-2 text-xs text-muted-foreground">{used} used this year</p>
             </div>
           );
         })}
@@ -258,9 +254,7 @@ function EmployeeLeave({ me }: { me: CurrentUser }) {
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-lift">
         <div className="border-b border-border px-6 py-4">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            My requests
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">My requests</h2>
         </div>
         {(myLeaves ?? []).length === 0 ? (
           <EmptyState
@@ -334,7 +328,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("leave_requests")
-        .select("*, profiles(full_name, employee_id, department)")
+        .select("*, profiles(full_name, employee_id, department, avatar_url)")
         .order("created_at", { ascending: false })
         .limit(200);
       return (data ?? []) as unknown as LeaveRequest[];
@@ -420,12 +414,11 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                   <div className="flex items-center gap-3">
                     <InitialsAvatar
                       name={l.profiles?.full_name ?? "?"}
+                      src={l.profiles?.avatar_url}
                       className="size-10 text-xs"
                     />
                     <div>
-                      <p className="font-semibold text-foreground">
-                        {l.profiles?.full_name}
-                      </p>
+                      <p className="font-semibold text-foreground">{l.profiles?.full_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {l.profiles?.employee_id} · {l.profiles?.department}
                       </p>
@@ -442,11 +435,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                         · {leaveDayCount(l.start_date, l.end_date)} working days
                       </span>
                     </p>
-                    {l.remarks && (
-                      <p className="mt-1 text-muted-foreground">
-                        “{l.remarks}”
-                      </p>
-                    )}
+                    {l.remarks && <p className="mt-1 text-muted-foreground">“{l.remarks}”</p>}
                   </div>
                   <div className="mt-4 flex gap-2">
                     <Button
@@ -501,6 +490,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                         <div className="flex items-center gap-3">
                           <InitialsAvatar
                             name={l.profiles?.full_name ?? "?"}
+                            src={l.profiles?.avatar_url}
                             className="size-8 text-xs"
                           />
                           <span className="font-semibold text-foreground">

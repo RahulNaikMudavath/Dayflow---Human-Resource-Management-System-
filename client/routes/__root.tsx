@@ -84,8 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Dayflow — Human Resource Management" },
       {
         property: "og:description",
-        content:
-          "Attendance, leave, payroll and people operations in one warm, aligned workspace.",
+        content: "Attendance, leave, payroll and people operations in one warm, aligned workspace.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

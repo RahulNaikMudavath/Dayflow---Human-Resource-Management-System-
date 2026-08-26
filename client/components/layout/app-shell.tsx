@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   Palmtree,
+  Sparkles,
   UserRound,
   Users,
   type LucideIcon,
@@ -16,6 +17,7 @@ import {
 import { supabase, checkAndDispatchLeaveReminders } from "@/lib/dayflow";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { InitialsAvatar } from "@/components/common/bits";
+import { FloatingChatbot } from "@/components/layout/floating-chatbot";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/assistant", label: "AI Assistant", icon: Sparkles },
   { to: "/attendance", label: "Attendance", icon: CalendarCheck },
   { to: "/leave", label: "Time Off", icon: Palmtree },
   { to: "/payroll", label: "Payroll", icon: IndianRupee },
@@ -107,6 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const items = NAV_ITEMS.filter((i) => !i.adminOnly || me?.isAdmin);
 
   async function signOut() {
+    localStorage.removeItem("dayflow_demo_session");
     await supabase.auth.signOut();
     queryClient.clear();
     navigate({ to: "/auth" });
@@ -130,9 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <nav className="flex flex-1 flex-col gap-1 px-3">
       {items.map((item) => {
         const active =
-          item.to === "/dashboard"
-            ? pathname === item.to
-            : pathname.startsWith(item.to);
+          item.to === "/dashboard" ? pathname === item.to : pathname.startsWith(item.to);
         return (
           <Link
             key={item.to}
@@ -147,9 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <item.icon className="size-4" />
             {item.label}
-            {active ? (
-              <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-            ) : null}
+            {active ? <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" /> : null}
           </Link>
         );
       })}
@@ -161,6 +161,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3">
         <InitialsAvatar
           name={me?.profile?.full_name ?? "…"}
+          src={me?.profile?.avatar_url}
           className="size-9 text-xs"
         />
         <div className="min-w-0 flex-1">
@@ -195,9 +196,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Sunrise className="size-4" />
           </span>
-          <span className="font-display text-lg font-semibold text-foreground">
-            Dayflow
-          </span>
+          <span className="font-display text-lg font-semibold text-foreground">Dayflow</span>
         </Link>
         <div className="flex items-center gap-2">
           <NotificationBell />
@@ -223,12 +222,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <main className="md:pl-64">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
-          {children}
-        </div>
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">{children}</div>
       </main>
 
-      <AiAssistantWidget />
+      {/* Floating AI Chatbot — visible on all authenticated pages */}
+      <FloatingChatbot />
     </div>
   );
 }

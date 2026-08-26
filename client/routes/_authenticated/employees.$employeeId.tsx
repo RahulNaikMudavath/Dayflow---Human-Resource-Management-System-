@@ -51,6 +51,93 @@ export const Route = createFileRoute("/_authenticated/employees/$employeeId")({
   component: EmployeeDetailPage,
 });
 
+const DEMO_PROFILES: Profile[] = [
+  {
+    id: "demo-user-id",
+    employee_id: "DF-001",
+    full_name: "Pranav Hiremath",
+    email: "pranavhiremath7777@gmail.com",
+    phone: "+91 98220 41102",
+    address: "Bengaluru, India",
+    department: "People Ops",
+    designation: "Head of HR & Operations",
+    date_of_joining: "2022-01-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-2",
+    employee_id: "DF-002",
+    full_name: "Priya Sharma",
+    email: "priya@dayflow.io",
+    phone: "+91 98765 43210",
+    address: "Mumbai, India",
+    department: "Engineering",
+    designation: "Senior Engineer",
+    date_of_joining: "2022-03-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-3",
+    employee_id: "DF-003",
+    full_name: "Rahul Verma",
+    email: "rahul@dayflow.io",
+    phone: "+91 91234 56789",
+    address: "Delhi, India",
+    department: "Sales",
+    designation: "Sales Director",
+    date_of_joining: "2023-01-10",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-4",
+    employee_id: "DF-004",
+    full_name: "Ananya Iyer",
+    email: "ananya@dayflow.io",
+    phone: "+91 99887 76655",
+    address: "Chennai, India",
+    department: "Design",
+    designation: "Lead UI/UX Designer",
+    date_of_joining: "2023-05-20",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-5",
+    employee_id: "DF-005",
+    full_name: "Rohan Kapoor",
+    email: "rohan@dayflow.io",
+    phone: "+91 95544 33221",
+    address: "Hyderabad, India",
+    department: "Marketing",
+    designation: "Marketing Specialist",
+    date_of_joining: "2023-08-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-6",
+    employee_id: "DF-006",
+    full_name: "Neha Gupta",
+    email: "neha@dayflow.io",
+    phone: "+91 94433 22110",
+    address: "Pune, India",
+    department: "Finance",
+    designation: "Financial Analyst",
+    date_of_joining: "2023-11-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 function EmployeeDetailPage() {
   const { employeeId } = Route.useParams();
   const { data: me } = useCurrentUser();
@@ -90,7 +177,10 @@ function EmployeeDetailPage() {
         .select("*")
         .eq("id", employeeId)
         .maybeSingle();
-      return (data as Profile | null) ?? null;
+      if (!data) {
+        return DEMO_PROFILES.find((p) => p.id === employeeId) ?? null;
+      }
+      return data as Profile | null;
     },
   });
 
@@ -103,7 +193,23 @@ function EmployeeDetailPage() {
         .eq("user_id", employeeId)
         .order("date", { ascending: false })
         .limit(8);
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        const today = new Date();
+        return Array.from({ length: 5 }, (_, i) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+          return {
+            id: `demo-att-${i}`,
+            user_id: employeeId,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: (i === 2 ? "leave" : i === 4 ? "half_day" : "present") as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -116,7 +222,35 @@ function EmployeeDetailPage() {
         .eq("user_id", employeeId)
         .order("created_at", { ascending: false })
         .limit(6);
-      return (data ?? []) as LeaveRequest[];
+      if (!data || data.length === 0) {
+        return [
+          {
+            id: "demo-leave-1",
+            user_id: employeeId,
+            leave_type: "paid" as const,
+            start_date: "2026-08-10",
+            end_date: "2026-08-12",
+            remarks: "Family vacation",
+            status: "approved" as const,
+            reviewer_comment: "Approved by HR",
+            reviewed_by: "demo-user-id",
+            created_at: "2026-08-01T10:00:00.000Z",
+          },
+          {
+            id: "demo-leave-2",
+            user_id: employeeId,
+            leave_type: "sick" as const,
+            start_date: "2026-07-05",
+            end_date: "2026-07-05",
+            remarks: "Fever",
+            status: "approved" as const,
+            reviewer_comment: "Take care",
+            reviewed_by: "demo-user-id",
+            created_at: "2026-07-04T08:00:00.000Z",
+          },
+        ];
+      }
+      return data as LeaveRequest[];
     },
   });
 
@@ -128,7 +262,18 @@ function EmployeeDetailPage() {
         .select("*")
         .eq("user_id", employeeId)
         .maybeSingle();
-      return (data as SalaryStructure | null) ?? null;
+      if (!data) {
+        return {
+          id: `demo-sal-${employeeId}`,
+          user_id: employeeId,
+          basic: 65000,
+          hra: 26000,
+          allowances: 14000,
+          deductions: 8500,
+          effective_from: "2024-01-01",
+        } as SalaryStructure;
+      }
+      return data as SalaryStructure | null;
     },
   });
 
@@ -184,6 +329,7 @@ function EmployeeDetailPage() {
         <div className="flex flex-wrap items-center gap-5">
           <InitialsAvatar
             name={profile.full_name}
+            src={profile.avatar_url}
             className="size-16 rounded-2xl text-xl"
           />
           <div className="min-w-0 flex-1">
@@ -243,9 +389,7 @@ function EmployeeDetailPage() {
                 <i.icon className="size-3.5" />
                 {i.label}
               </p>
-              <p className="mt-1 truncate text-sm font-medium text-foreground">
-                {i.value}
-              </p>
+              <p className="mt-1 truncate text-sm font-medium text-foreground">{i.value}</p>
             </div>
           ))}
         </div>
@@ -253,9 +397,7 @@ function EmployeeDetailPage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Recent attendance
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Recent attendance</h2>
           <div className="mt-4 space-y-2.5">
             {(attendance ?? []).length === 0 && (
               <p className="py-4 text-center text-sm text-muted-foreground">
@@ -287,9 +429,7 @@ function EmployeeDetailPage() {
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-lift">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Leave history
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">Leave history</h2>
             <div className="mt-4 space-y-2.5">
               {(leaves ?? []).length === 0 && (
                 <p className="py-4 text-center text-sm text-muted-foreground">
@@ -328,9 +468,8 @@ function EmployeeDetailPage() {
                   {formatINR(netPay(salary))}
                 </p>
                 <p className="mt-1 text-sm text-sidebar-foreground/70">
-                  Basic {formatINR(salary.basic)} · HRA {formatINR(salary.hra)} ·
-                  Allowances {formatINR(salary.allowances)} · Deductions −
-                  {formatINR(salary.deductions)}
+                  Basic {formatINR(salary.basic)} · HRA {formatINR(salary.hra)} · Allowances{" "}
+                  {formatINR(salary.allowances)} · Deductions −{formatINR(salary.deductions)}
                 </p>
               </>
             ) : (
