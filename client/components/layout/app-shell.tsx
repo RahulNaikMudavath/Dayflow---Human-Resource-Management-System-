@@ -8,12 +8,9 @@ import {
   LogOut,
   Menu,
   Palmtree,
-<<<<<<< HEAD
   PanelLeftClose,
   PanelLeftOpen,
-=======
   Sparkles,
->>>>>>> origin/prajwal
   UserRound,
   Users,
   type LucideIcon,
@@ -202,7 +199,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             )}
           >
-<<<<<<< HEAD
             <item.icon className={cn("size-4 shrink-0 transition-transform duration-200 group-hover:scale-110", active && "text-sidebar-primary")} />
             {(!isDesktop || !collapsed) && (
               <span className="truncate animate-in fade-in duration-200">{item.label}</span>
@@ -216,11 +212,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {item.label}
               </span>
             )}
-=======
-            <item.icon className="size-4" />
-            {item.label}
-            {active ? <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" /> : null}
->>>>>>> origin/prajwal
           </Link>
         );
       })}
@@ -328,7 +319,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* Main Content Area */}
       <main
         className={cn(
@@ -339,10 +329,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">
           {children}
         </div>
-=======
-      <main className="md:pl-64">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8">{children}</div>
->>>>>>> origin/prajwal
       </main>
 
       {/* Floating AI Chatbot — visible on all authenticated pages */}
