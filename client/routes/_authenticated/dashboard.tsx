@@ -146,7 +146,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
         .select("*")
         .eq("user_id", me.id)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(5);
       return (data ?? []) as unknown as LeaveRequest[];
     },
   });
@@ -346,7 +346,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
                 No leave requests yet.
               </p>
             )}
-            {(myLeaves ?? []).map((l) => (
+            {(myLeaves ?? []).slice(0, 5).map((l) => (
               <div
                 key={l.id}
                 className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
