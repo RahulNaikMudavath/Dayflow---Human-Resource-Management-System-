@@ -7,7 +7,7 @@ export function InitialsAvatar({
   className,
 }: {
   name: string;
-  src?: string | null;
+  src?: string | null | undefined;
   className?: string;
 }) {
   if (src) {

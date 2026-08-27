@@ -61,10 +61,11 @@ export function useCurrentUser() {
         }
         return null;
       }
-      let [{ data: profile }, { data: roles }] = await Promise.all([
+      const [{ data: rawProfile }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", user.id),
       ]);
+      let profile: Profile | null = (rawProfile as unknown as Profile | null);
       if (!profile) {
         const metadata = user.user_metadata ?? {};
         const metaFullName =
@@ -106,7 +107,7 @@ export function useCurrentUser() {
       return {
         id: user.id,
         email: user.email ?? "",
-        profile: (profile as unknown as Profile | null) ?? null,
+        profile,
         roles: roleList,
         isAdmin: roleList.includes("admin"),
       };
