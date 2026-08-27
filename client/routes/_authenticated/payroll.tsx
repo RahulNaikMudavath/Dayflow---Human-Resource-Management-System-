@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { IndianRupee, Loader2, Pencil, Plus, Users, Wallet } from "lucide-react";
+import { FileDown, IndianRupee, Loader2, Pencil, Plus, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   supabase,
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/_authenticated/payroll")({
 type SalaryWithProfile = SalaryStructure & {
   profiles?: Pick<
     Profile,
-    "full_name" | "employee_id" | "department" | "designation"
+    "full_name" | "employee_id" | "department" | "designation" | "avatar_url"
   > | null;
 };
 
@@ -83,7 +83,18 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
         .select("*")
         .eq("user_id", me.id)
         .maybeSingle();
-      return (data as SalaryStructure | null) ?? null;
+      if (!data) {
+        return {
+          id: `demo-sal-${me.id}`,
+          user_id: me.id,
+          basic: 65000,
+          hra: 26000,
+          allowances: 14000,
+          deductions: 8500,
+          effective_from: "2024-01-01",
+        } as SalaryStructure;
+      }
+      return data as SalaryStructure | null;
     },
   });
 
@@ -114,10 +125,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   if (!salary) {
     return (
       <div>
-        <PageHeader
-          title="Payroll"
-          description="Your salary structure, always visible."
-        />
+        <PageHeader title="Payroll" description="Your salary structure, always visible." />
         <EmptyState
           icon={Wallet}
           title="Salary not configured yet"
@@ -132,6 +140,20 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   const totalDeductions = salary.deductions + leaveDeduction;
   const net = netPayWithLeaves(salary, unpaidLeaveDays);
 
+  const download = async () => {
+    const { exportPayrollPdf } = await import("@/lib/pdf");
+    exportPayrollPdf({
+      profile: me.profile ?? {
+        full_name: me.email,
+        employee_id: "—",
+        department: null,
+        designation: null,
+      },
+      salary,
+    });
+    toast.success("Salary summary PDF downloaded.");
+  };
+
   const rows = [
     { label: "Basic", value: salary.basic, tone: "bg-chart-1" },
     { label: "House rent allowance", value: salary.hra, tone: "bg-chart-2" },
@@ -143,7 +165,12 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
       <PageHeader
         title="Payroll & Salary Slip"
         description="Your transparent salary breakdown, updated automatically with approved leave deductions."
-      />
+      >
+        <Button className="rounded-xl cursor-pointer" onClick={() => void download()}>
+          <FileDown className="size-4" />
+          Download PDF
+        </Button>
+      </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="relative overflow-hidden rounded-2xl bg-sidebar p-8 text-sidebar-foreground shadow-lift lg:col-span-2">
@@ -167,9 +194,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
           )}
           <div className="mt-6 rounded-xl bg-sidebar-accent/60 px-4 py-3 text-sm">
             <p className="text-sidebar-foreground/70">Annual gross</p>
-            <p className="font-display text-xl font-semibold">
-              {formatINR(gross * 12)}
-            </p>
+            <p className="font-display text-xl font-semibold">{formatINR(gross * 12)}</p>
           </div>
           <p className="mt-4 text-xs text-sidebar-foreground/50">
             Effective from {format(new Date(salary.effective_from), "dd MMM yyyy")}
@@ -177,9 +202,7 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-3">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Monthly breakdown
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Monthly breakdown</h2>
           <div className="mt-5 space-y-4">
             {rows.map((r) => (
               <div key={r.label}>
@@ -248,6 +271,105 @@ function EmployeePayroll({ me }: { me: CurrentUser }) {
   );
 }
 
+const DEMO_SALARIES: SalaryWithProfile[] = [
+  {
+    id: "demo-sal-1",
+    user_id: "demo-user-id",
+    basic: 85000,
+    hra: 34000,
+    allowances: 18000,
+    deductions: 11000,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Pranav Hiremath",
+      employee_id: "DF-001",
+      department: "People Ops",
+      designation: "Head of HR & Operations",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-2",
+    user_id: "demo-emp-2",
+    basic: 70000,
+    hra: 28000,
+    allowances: 15000,
+    deductions: 9200,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Priya Sharma",
+      employee_id: "DF-002",
+      department: "Engineering",
+      designation: "Senior Engineer",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-3",
+    user_id: "demo-emp-3",
+    basic: 75000,
+    hra: 30000,
+    allowances: 16000,
+    deductions: 9800,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Rahul Verma",
+      employee_id: "DF-003",
+      department: "Sales",
+      designation: "Sales Director",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-4",
+    user_id: "demo-emp-4",
+    basic: 68000,
+    hra: 27200,
+    allowances: 14000,
+    deductions: 8900,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Ananya Iyer",
+      employee_id: "DF-004",
+      department: "Design",
+      designation: "Lead UI/UX Designer",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-5",
+    user_id: "demo-emp-5",
+    basic: 55000,
+    hra: 22000,
+    allowances: 11000,
+    deductions: 7200,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Rohan Kapoor",
+      employee_id: "DF-005",
+      department: "Marketing",
+      designation: "Marketing Specialist",
+      avatar_url: null,
+    },
+  },
+  {
+    id: "demo-sal-6",
+    user_id: "demo-emp-6",
+    basic: 60000,
+    hra: 24000,
+    allowances: 12000,
+    deductions: 7800,
+    effective_from: "2024-01-01",
+    profiles: {
+      full_name: "Neha Gupta",
+      employee_id: "DF-006",
+      department: "Finance",
+      designation: "Financial Analyst",
+      avatar_url: null,
+    },
+  },
+];
+
 /* -------------------------------- Admin ------------------------------- */
 
 function AdminPayroll({ me }: { me: CurrentUser }) {
@@ -255,15 +377,18 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
   const [editing, setEditing] = useState<SalaryWithProfile | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const { data: salaries } = useQuery({
+  const { data: salaries = DEMO_SALARIES } = useQuery({
     queryKey: ["payroll", "all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("salary_structures")
-        .select("*, profiles(full_name, employee_id, department, designation)")
+        .select("*, profiles(full_name, employee_id, department, designation, avatar_url)")
         .order("basic", { ascending: false })
         .limit(100);
-      return (data ?? []) as unknown as SalaryWithProfile[];
+      if (!data || data.length === 0) {
+        return DEMO_SALARIES;
+      }
+      return data as unknown as SalaryWithProfile[];
     },
   });
 
@@ -309,6 +434,20 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
   const avgNet = (salaries ?? []).length
     ? Math.round(totalNet / (salaries ?? []).length)
     : 0;
+
+  const exportOne = async (s: SalaryWithProfile) => {
+    const { exportPayrollPdf } = await import("@/lib/pdf");
+    exportPayrollPdf({
+      profile: {
+        full_name: s.profiles?.full_name ?? "Unknown",
+        employee_id: s.profiles?.employee_id ?? "—",
+        department: s.profiles?.department ?? null,
+        designation: s.profiles?.designation ?? null,
+      },
+      salary: s,
+    });
+    toast.success(`Salary summary downloaded for ${s.profiles?.full_name ?? "employee"}.`);
+  };
 
   return (
     <div>
@@ -377,6 +516,7 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                       <div className="flex items-center gap-3">
                         <InitialsAvatar
                           name={s.profiles?.full_name ?? "?"}
+                          src={s.profiles?.avatar_url}
                           className="size-9 text-xs"
                         />
                         <div>
@@ -412,15 +552,26 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                       {formatINR(empNet)}
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => setEditing(s)}
-                      >
-                        <Pencil className="size-3.5" />
-                        Edit
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg cursor-pointer"
+                          onClick={() => void exportOne(s)}
+                        >
+                          <FileDown className="size-3.5" />
+                          PDF
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg cursor-pointer"
+                          onClick={() => setEditing(s)}
+                        >
+                          <Pencil className="size-3.5" />
+                          Edit
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -525,11 +676,7 @@ function SalaryDialog({
     onError: (e) => toast.error(e.message),
   });
 
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-  ) => (
+  const field = (label: string, value: string, set: (v: string) => void) => (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <Input
@@ -547,13 +694,9 @@ function SalaryDialog({
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
-            {salary
-              ? `Edit salary — ${salary.profiles?.full_name ?? ""}`
-              : "New salary structure"}
+            {salary ? `Edit salary — ${salary.profiles?.full_name ?? ""}` : "New salary structure"}
           </DialogTitle>
-          <DialogDescription>
-            Monthly amounts in INR. Net pay updates live.
-          </DialogDescription>
+          <DialogDescription>Monthly amounts in INR. Net pay updates live.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {!salary && (
@@ -580,20 +723,14 @@ function SalaryDialog({
             {field("Deductions", deductions, setDeductions)}
           </div>
           <div className="flex items-center justify-between rounded-xl bg-accent/50 px-4 py-3">
-            <span className="text-sm font-semibold text-accent-foreground">
-              Net monthly pay
-            </span>
+            <span className="text-sm font-semibold text-accent-foreground">Net monthly pay</span>
             <span className="font-display text-xl font-semibold text-accent-foreground tabular-nums">
               {formatINR(net)}
             </span>
           </div>
         </div>
         <DialogFooter>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className="rounded-xl"
-          >
+          <Button onClick={() => save.mutate()} disabled={save.isPending} className="rounded-xl">
             {save.isPending && <Loader2 className="size-4 animate-spin" />}
             Save structure
           </Button>

@@ -11,14 +11,17 @@ import {
   startOfWeek,
 } from "date-fns";
 import {
+  CalendarRange,
   CalendarX2,
   ChevronLeft,
   ChevronRight,
+  FileDown,
   Palmtree,
   Sunrise,
   Users,
   UserX2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   supabase,
   ATTENDANCE_META,
@@ -68,10 +71,7 @@ function AttendancePage() {
 function EmployeeAttendance({ me }: { me: CurrentUser }) {
   const [cursor, setCursor] = useState(new Date());
   const monthKey = format(cursor, "yyyy-MM");
-  const rangeStart = format(
-    startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 }),
-    "yyyy-MM-dd",
-  );
+  const rangeStart = format(startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const rangeEnd = format(endOfMonth(cursor), "yyyy-MM-dd");
 
   const { data: rows } = useQuery({
@@ -84,7 +84,23 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
         .gte("date", rangeStart)
         .lte("date", rangeEnd)
         .order("date");
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        const today = new Date();
+        return Array.from({ length: 20 }, (_, i) => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = format(d, "yyyy-MM-dd");
+          return {
+            id: `demo-att-mine-${dateStr}`,
+            user_id: me.id,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: (i === 3 ? "leave" : i === 7 ? "half_day" : "present") as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -111,6 +127,59 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
     .slice(-7)
     .reverse();
 
+  /* Weekly view */
+  const [weekCursor, setWeekCursor] = useState(new Date());
+  const weekStart = startOfWeek(weekCursor, { weekStartsOn: 1 });
+  const weekStartKey = format(weekStart, "yyyy-MM-dd");
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const { data: weekRows } = useQuery({
+    queryKey: ["attendance", "mine-week", weekStartKey],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("attendance")
+        .select("*")
+        .eq("user_id", me.id)
+        .gte("date", weekStartKey)
+        .lte("date", format(addDays(weekStart, 6), "yyyy-MM-dd"))
+        .order("date");
+      if (!data || data.length === 0) {
+        return weekDays.slice(0, 5).map((d) => {
+          const dateStr = format(d, "yyyy-MM-dd");
+          return {
+            id: `demo-att-week-${dateStr}`,
+            user_id: me.id,
+            date: dateStr,
+            check_in: `${dateStr}T09:15:00.000Z`,
+            check_out: `${dateStr}T17:30:00.000Z`,
+            status: "present" as AttendanceRow["status"],
+          };
+        });
+      }
+      return data as AttendanceRow[];
+    },
+  });
+
+  const weekTotal = (weekRows ?? []).reduce(
+    (sum, r) => sum + (workHours(r.check_in, r.check_out) ?? 0),
+    0,
+  );
+
+  const exportWeek = async () => {
+    const { exportWeeklyAttendancePdf } = await import("@/lib/pdf");
+    exportWeeklyAttendancePdf({
+      profile: me.profile ?? {
+        full_name: me.email,
+        employee_id: "—",
+        department: null,
+        designation: null,
+      },
+      weekStart,
+      rows: weekRows ?? [],
+    });
+    toast.success("Weekly attendance PDF downloaded.");
+  };
+
   return (
     <div>
       <PageHeader
@@ -124,6 +193,98 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
         <StatCard icon={Palmtree} label="On leave" value={counts.leave} hint="this month" />
         <StatCard icon={CalendarX2} label="Half days" value={counts.half} hint="this month" />
         <StatCard icon={UserX2} label="Absent" value={counts.absent} hint="this month" />
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-lift">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-foreground">
+              <CalendarRange className="size-5 text-primary" />
+              Week of {format(weekStart, "dd MMM yyyy")}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {Math.round(weekTotal * 10) / 10}h logged this week
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="mr-1 rounded-lg"
+              onClick={() => void exportWeek()}
+            >
+              <FileDown className="size-4" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8 rounded-lg"
+              onClick={() => setWeekCursor((c) => addDays(c, -7))}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={() => setWeekCursor(new Date())}
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8 rounded-lg"
+              onClick={() => setWeekCursor((c) => addDays(c, 7))}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          {weekDays.map((d) => {
+            const key = format(d, "yyyy-MM-dd");
+            const row = (weekRows ?? []).find((r) => r.date === key);
+            const isToday = key === todayKey;
+            const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+            const hours = row ? workHours(row.check_in, row.check_out) : null;
+            return (
+              <div
+                key={key}
+                className={cn(
+                  "flex flex-col gap-1.5 rounded-xl border px-3 py-3",
+                  isToday ? "border-primary bg-accent/50" : "border-border bg-background",
+                  isWeekend && !row && "opacity-50",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+                    {format(d, "EEE")}
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {format(d, "d MMM")}
+                  </span>
+                </div>
+                {row ? (
+                  <>
+                    <AttendanceBadge status={row.status} />
+                    <p className="text-[11px] tabular-nums text-muted-foreground">
+                      {formatTime(row.check_in)} → {formatTime(row.check_out)}
+                    </p>
+                    {hours != null && (
+                      <p className="text-xs font-semibold text-foreground">{hours}h</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="py-1 text-[11px] text-muted-foreground">
+                    {isWeekend ? "Weekend" : "No record"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
@@ -202,9 +363,7 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-2">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Recent days
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Recent days</h2>
           <div className="mt-4 space-y-2.5">
             {recent.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">
@@ -238,30 +397,124 @@ function EmployeeAttendance({ me }: { me: CurrentUser }) {
   );
 }
 
+const DEMO_PROFILES: Profile[] = [
+  {
+    id: "demo-user-id",
+    employee_id: "DF-001",
+    full_name: "Pranav Hiremath",
+    email: "pranavhiremath7777@gmail.com",
+    phone: "+91 98220 41102",
+    address: "Bengaluru, India",
+    department: "People Ops",
+    designation: "Head of HR & Operations",
+    date_of_joining: "2022-01-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-2",
+    employee_id: "DF-002",
+    full_name: "Priya Sharma",
+    email: "priya@dayflow.io",
+    phone: "+91 98765 43210",
+    address: "Mumbai, India",
+    department: "Engineering",
+    designation: "Senior Engineer",
+    date_of_joining: "2022-03-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-3",
+    employee_id: "DF-003",
+    full_name: "Rahul Verma",
+    email: "rahul@dayflow.io",
+    phone: "+91 91234 56789",
+    address: "Delhi, India",
+    department: "Sales",
+    designation: "Sales Director",
+    date_of_joining: "2023-01-10",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-4",
+    employee_id: "DF-004",
+    full_name: "Ananya Iyer",
+    email: "ananya@dayflow.io",
+    phone: "+91 99887 76655",
+    address: "Chennai, India",
+    department: "Design",
+    designation: "Lead UI/UX Designer",
+    date_of_joining: "2023-05-20",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-5",
+    employee_id: "DF-005",
+    full_name: "Rohan Kapoor",
+    email: "rohan@dayflow.io",
+    phone: "+91 95544 33221",
+    address: "Hyderabad, India",
+    department: "Marketing",
+    designation: "Marketing Specialist",
+    date_of_joining: "2023-08-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-6",
+    employee_id: "DF-006",
+    full_name: "Neha Gupta",
+    email: "neha@dayflow.io",
+    phone: "+91 94433 22110",
+    address: "Pune, India",
+    department: "Finance",
+    designation: "Financial Analyst",
+    date_of_joining: "2023-11-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 /* -------------------------------- Admin ------------------------------- */
 
 function AdminAttendance() {
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const { data: everyone } = useQuery({
+  const { data: everyone = DEMO_PROFILES } = useQuery({
     queryKey: ["profiles", "all"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("full_name");
-      return (data ?? []) as Profile[];
+      const { data } = await supabase.from("profiles").select("*").order("full_name");
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES;
+      }
+      return data as Profile[];
     },
   });
 
   const { data: dayRows } = useQuery({
     queryKey: ["attendance", "day", date],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("attendance")
-        .select("*")
-        .eq("date", date);
-      return (data ?? []) as AttendanceRow[];
+      const { data } = await supabase.from("attendance").select("*").eq("date", date);
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES.map((p, idx) => ({
+          id: `demo-att-${p.id}-${date}`,
+          user_id: p.id,
+          date,
+          check_in: `${date}T09:15:00.000Z`,
+          check_out: idx % 2 === 0 ? `${date}T17:30:00.000Z` : null,
+          status: (idx === 3 ? "leave" : idx === 4 ? "half_day" : "present") as AttendanceRow["status"],
+        }));
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -284,6 +537,25 @@ function AdminAttendance() {
     d.setDate(d.getDate() + days);
     setDate(format(d, "yyyy-MM-dd"));
   }
+
+  /** One-click weekly report for a single employee (week of the viewed day). */
+  const exportEmployeeWeek = async (p: Profile) => {
+    const ws = startOfWeek(new Date(date + "T00:00:00"), { weekStartsOn: 1 });
+    const { data } = await supabase
+      .from("attendance")
+      .select("*")
+      .eq("user_id", p.id)
+      .gte("date", format(ws, "yyyy-MM-dd"))
+      .lte("date", format(addDays(ws, 6), "yyyy-MM-dd"))
+      .order("date");
+    const { exportWeeklyAttendancePdf } = await import("@/lib/pdf");
+    exportWeeklyAttendancePdf({
+      profile: p,
+      weekStart: ws,
+      rows: (data ?? []) as AttendanceRow[],
+    });
+    toast.success(`Weekly report downloaded for ${p.full_name}.`);
+  };
 
   return (
     <div>
@@ -316,10 +588,30 @@ function AdminAttendance() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Sunrise} label="Present" value={counts.present} hint={format(new Date(date), "dd MMM yyyy")} />
-        <StatCard icon={Palmtree} label="On leave" value={counts.leave} hint={format(new Date(date), "dd MMM yyyy")} />
-        <StatCard icon={CalendarX2} label="Half day" value={counts.half} hint={format(new Date(date), "dd MMM yyyy")} />
-        <StatCard icon={UserX2} label="Absent" value={counts.absent} hint={`${notMarked} not marked yet`} />
+        <StatCard
+          icon={Sunrise}
+          label="Present"
+          value={counts.present}
+          hint={format(new Date(date), "dd MMM yyyy")}
+        />
+        <StatCard
+          icon={Palmtree}
+          label="On leave"
+          value={counts.leave}
+          hint={format(new Date(date), "dd MMM yyyy")}
+        />
+        <StatCard
+          icon={CalendarX2}
+          label="Half day"
+          value={counts.half}
+          hint={format(new Date(date), "dd MMM yyyy")}
+        />
+        <StatCard
+          icon={UserX2}
+          label="Absent"
+          value={counts.absent}
+          hint={`${notMarked} not marked yet`}
+        />
       </div>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-lift">
@@ -333,6 +625,7 @@ function AdminAttendance() {
                 <th className="px-5 py-3.5">Check-in</th>
                 <th className="px-5 py-3.5">Check-out</th>
                 <th className="px-5 py-3.5">Hours</th>
+                <th className="px-5 py-3.5 text-right">Report</th>
               </tr>
             </thead>
             <tbody>
@@ -346,20 +639,18 @@ function AdminAttendance() {
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <InitialsAvatar name={p.full_name} className="size-9 text-xs" />
+                        <InitialsAvatar
+                          name={p.full_name}
+                          src={p.avatar_url}
+                          className="size-9 text-xs"
+                        />
                         <div>
-                          <p className="font-semibold text-foreground">
-                            {p.full_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {p.employee_id}
-                          </p>
+                          <p className="font-semibold text-foreground">{p.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{p.employee_id}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {p.department ?? "—"}
-                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{p.department ?? "—"}</td>
                     <td className="px-5 py-3">
                       {row ? (
                         <AttendanceBadge status={row.status} />
@@ -378,12 +669,24 @@ function AdminAttendance() {
                     <td className="px-5 py-3 tabular-nums text-foreground">
                       {duration ?? "—"}
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        title={`Export week of ${format(startOfWeek(new Date(date + "T00:00:00"), { weekStartsOn: 1 }), "dd MMM")} as PDF`}
+                        onClick={() => void exportEmployeeWeek(p)}
+                      >
+                        <FileDown className="size-3.5" />
+                        Week PDF
+                      </Button>
+                    </td>
                   </tr>
                 );
               })}
               {(everyone ?? []).length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10">
+                  <td colSpan={7} className="px-5 py-10">
                     <EmptyState
                       icon={Users}
                       title="No employees yet"

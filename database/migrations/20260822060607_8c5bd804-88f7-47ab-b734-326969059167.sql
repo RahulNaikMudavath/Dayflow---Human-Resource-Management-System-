@@ -37,14 +37,14 @@ create table public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.user_roles (
+create table if not exists public.user_roles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   role public.app_role not null,
   unique (user_id, role)
 );
 
-create table public.attendance (
+create table if not exists public.attendance (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   date date not null,
@@ -55,7 +55,7 @@ create table public.attendance (
   unique (user_id, date)
 );
 
-create table public.leave_requests (
+create table if not exists public.leave_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   leave_type public.leave_type not null,
@@ -69,7 +69,7 @@ create table public.leave_requests (
   updated_at timestamptz not null default now()
 );
 
-create table public.salary_structures (
+create table if not exists public.salary_structures (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
   basic numeric(12,2) not null default 0,
@@ -125,49 +125,74 @@ as $$
   )
 $$;
 
+<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 -- RLS Policies
+=======
+drop policy if exists "Signed-in users can view profiles" on public.profiles;
+>>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create policy "Signed-in users can view profiles"
   on public.profiles for select to authenticated using (true);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update to authenticated using (auth.uid() = id);
+
+drop policy if exists "Admins can update any profile" on public.profiles;
 create policy "Admins can update any profile"
   on public.profiles for update to authenticated using (public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own roles" on public.user_roles;
 create policy "Users can view their own roles"
   on public.user_roles for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own attendance, admins view all" on public.attendance;
 create policy "Users can view their own attendance, admins view all"
   on public.attendance for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Users can check themselves in, admins can add records" on public.attendance;
 create policy "Users can check themselves in, admins can add records"
   on public.attendance for insert to authenticated
   with check (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Users can update their own attendance, admins update all" on public.attendance;
 create policy "Users can update their own attendance, admins update all"
   on public.attendance for update to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own leave requests, admins view all" on public.leave_requests;
 create policy "Users can view their own leave requests, admins view all"
   on public.leave_requests for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Employees can apply for leave" on public.leave_requests;
 create policy "Employees can apply for leave"
   on public.leave_requests for insert to authenticated
   with check (user_id = auth.uid());
+
+drop policy if exists "Admins can review leave requests" on public.leave_requests;
 create policy "Admins can review leave requests"
   on public.leave_requests for update to authenticated
   using (public.has_role(auth.uid(), 'admin'))
   with check (public.has_role(auth.uid(), 'admin'));
 
+drop policy if exists "Users can view their own salary, admins view all" on public.salary_structures;
 create policy "Users can view their own salary, admins view all"
   on public.salary_structures for select to authenticated
   using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Admins can create salary structures" on public.salary_structures;
 create policy "Admins can create salary structures"
   on public.salary_structures for insert to authenticated
   with check (public.has_role(auth.uid(), 'admin'));
+
+drop policy if exists "Admins can update salary structures" on public.salary_structures;
 create policy "Admins can update salary structures"
   on public.salary_structures for update to authenticated
   using (public.has_role(auth.uid(), 'admin'));
 
+<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create policy "Users view their notifications" on public.notifications
   for select to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 create policy "Users and system create notifications" on public.notifications
@@ -176,6 +201,9 @@ create policy "Users update their notifications" on public.notifications
   for update to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
 -- 4. User Trigger Function
+=======
+-- Trigger function with 100% fail-proof guards so GoTrue Auth never returns 500
+>>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -183,29 +211,43 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, employee_id, full_name, email, department, designation)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'employee_id', 'DF-' || upper(substr(new.id::text, 1, 6))),
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    new.email,
-    new.raw_user_meta_data->>'department',
-    new.raw_user_meta_data->>'designation'
-  );
-  insert into public.user_roles (user_id, role)
-  values (
-    new.id,
-    case when new.raw_user_meta_data->>'role' = 'admin'
-      then 'admin'::public.app_role
-      else 'employee'::public.app_role
-    end
-  );
+  if (to_regclass('public.profiles') is not null) then
+    insert into public.profiles (id, employee_id, full_name, email, department, designation)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'employee_id', 'DF-' || upper(substr(new.id::text, 1, 6))),
+      coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+      new.email,
+      new.raw_user_meta_data->>'department',
+      new.raw_user_meta_data->>'designation'
+    )
+    on conflict (id) do update set
+      email = excluded.email,
+      full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name);
+  end if;
+
+  if (to_regclass('public.user_roles') is not null and to_regtype('public.app_role') is not null) then
+    insert into public.user_roles (user_id, role)
+    values (
+      new.id,
+      case when new.raw_user_meta_data->>'role' = 'admin'
+        then 'admin'::public.app_role
+        else 'employee'::public.app_role
+      end
+    )
+    on conflict (user_id, role) do nothing;
+  end if;
+
+  return new;
+exception when others then
   return new;
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
+<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
   for each row execute function public.handle_new_user();
 
 -- 5. Seed Demo Users (Password: Dayflow@123)
@@ -296,3 +338,6 @@ values
   ('a0000000-0000-4000-8000-000000000006', 68000, 27200, 19000, 11500, '2025-04-01'),
   ('a0000000-0000-4000-8000-000000000007', 60000, 24000, 15000, 10000, '2025-04-01'),
   ('a0000000-0000-4000-8000-000000000008', 45000, 18000, 12000, 8000, '2025-04-01');
+=======
+  for each row execute function public.handle_new_user();
+>>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql

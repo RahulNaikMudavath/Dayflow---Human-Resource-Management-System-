@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, format, startOfMonth, startOfWeek, subDays } from "date-fns";
@@ -8,10 +8,12 @@ import {
   CalendarCheck,
   Check,
   Clock,
+  LogOut,
   Palmtree,
   Sparkles,
   Timer,
   UserCheck,
+  UserRound,
   Users,
   Wallet,
   XCircle,
@@ -87,6 +89,33 @@ function greeting() {
   return "Good evening";
 }
 
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  to: string;
+  icon: typeof UserRound;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-lift transition-colors hover:border-primary/40 hover:bg-accent/50"
+    >
+      <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <Icon className="size-5" />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold text-foreground">{label}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+    </Link>
+  );
+}
+
 function DashboardPage() {
   const { data: me } = useCurrentUser();
 
@@ -100,8 +129,17 @@ function DashboardPage() {
 /* ------------------------------ Employee ------------------------------ */
 
 function EmployeeDashboard({ me }: { me: CurrentUser }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const today = new Date();
   const monthKey = format(startOfMonth(today), "yyyy-MM-dd");
+
+  async function signOut() {
+    localStorage.removeItem("dayflow_demo_session");
+    await supabase.auth.signOut();
+    queryClient.clear();
+    navigate({ to: "/auth" });
+  }
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const yearStart = format(new Date(today.getFullYear(), 0, 1), "yyyy-MM-dd");
 
@@ -180,9 +218,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
     .filter((l) => l.leave_type === "paid")
     .reduce((s, l) => s + leaveDayCount(l.start_date, l.end_date), 0);
 
-  const pendingCount = (myLeaves ?? []).filter(
-    (l) => l.status === "pending",
-  ).length;
+  const pendingCount = (myLeaves ?? []).filter((l) => l.status === "pending").length;
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -234,6 +270,40 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
       <CheckInCard userId={me.id} />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <QuickAction
+          to="/profile"
+          icon={UserRound}
+          label="Profile"
+          hint="View & edit your details"
+        />
+        <QuickAction
+          to="/attendance"
+          icon={CalendarCheck}
+          label="Attendance"
+          hint="Check-ins & history"
+        />
+        <QuickAction
+          to="/leave"
+          icon={Palmtree}
+          label="Leave requests"
+          hint="Apply & track time off"
+        />
+        <button
+          type="button"
+          onClick={signOut}
+          className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-lift transition-colors hover:border-destructive/40 hover:bg-destructive/5"
+        >
+          <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-destructive/10 group-hover:text-destructive">
+            <LogOut className="size-5" />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold text-foreground">Log out</span>
+            <span className="block text-xs text-muted-foreground">End your session</span>
+          </span>
+        </button>
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={CalendarCheck}
           label="Present this month"
@@ -263,9 +333,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              This week
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">This week</h2>
             <Link
               to="/attendance"
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -284,23 +352,16 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
                   key={key}
                   className={cn(
                     "flex flex-col items-center gap-2 rounded-xl border px-1 py-3",
-                    isToday
-                      ? "border-primary bg-accent/50"
-                      : "border-border bg-background",
+                    isToday ? "border-primary bg-accent/50" : "border-border bg-background",
                   )}
                 >
                   <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                     {format(d, "EEE")}
                   </span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {format(d, "d")}
-                  </span>
+                  <span className="text-sm font-semibold text-foreground">{format(d, "d")}</span>
                   {row ? (
                     <span
-                      className={cn(
-                        "size-2 rounded-full",
-                        ATTENDANCE_META[row.status].dot,
-                      )}
+                      className={cn("size-2 rounded-full", ATTENDANCE_META[row.status].dot)}
                       title={ATTENDANCE_META[row.status].label}
                     />
                   ) : (
@@ -330,9 +391,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-foreground">
-              Recent time off
-            </h2>
+            <h2 className="font-display text-lg font-semibold text-foreground">Recent time off</h2>
             <Link
               to="/leave"
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -371,6 +430,93 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   );
 }
 
+const DEMO_PROFILES: Profile[] = [
+  {
+    id: "demo-user-id",
+    employee_id: "DF-001",
+    full_name: "Pranav Hiremath",
+    email: "pranavhiremath7777@gmail.com",
+    phone: "+91 98220 41102",
+    address: "Bengaluru, India",
+    department: "People Ops",
+    designation: "Head of HR & Operations",
+    date_of_joining: "2022-01-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-2",
+    employee_id: "DF-002",
+    full_name: "Priya Sharma",
+    email: "priya@dayflow.io",
+    phone: "+91 98765 43210",
+    address: "Mumbai, India",
+    department: "Engineering",
+    designation: "Senior Engineer",
+    date_of_joining: "2022-03-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-3",
+    employee_id: "DF-003",
+    full_name: "Rahul Verma",
+    email: "rahul@dayflow.io",
+    phone: "+91 91234 56789",
+    address: "Delhi, India",
+    department: "Sales",
+    designation: "Sales Director",
+    date_of_joining: "2023-01-10",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-4",
+    employee_id: "DF-004",
+    full_name: "Ananya Iyer",
+    email: "ananya@dayflow.io",
+    phone: "+91 99887 76655",
+    address: "Chennai, India",
+    department: "Design",
+    designation: "Lead UI/UX Designer",
+    date_of_joining: "2023-05-20",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-5",
+    employee_id: "DF-005",
+    full_name: "Rohan Kapoor",
+    email: "rohan@dayflow.io",
+    phone: "+91 95544 33221",
+    address: "Hyderabad, India",
+    department: "Marketing",
+    designation: "Marketing Specialist",
+    date_of_joining: "2023-08-01",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-emp-6",
+    employee_id: "DF-006",
+    full_name: "Neha Gupta",
+    email: "neha@dayflow.io",
+    phone: "+91 94433 22110",
+    address: "Pune, India",
+    department: "Finance",
+    designation: "Financial Analyst",
+    date_of_joining: "2023-11-15",
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
 /* -------------------------------- Admin ------------------------------- */
 
 function AdminDashboard({ me }: { me: CurrentUser }) {
@@ -381,7 +527,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
     "total_employees" | "present_today" | "on_leave_today" | "pending_approvals" | null
   >(null);
 
-  const { data: everyone } = useQuery({
+  const { data: everyone = DEMO_PROFILES } = useQuery({
     queryKey: ["profiles", "all"],
     refetchInterval: 3000,
     refetchOnWindowFocus: true,
@@ -391,7 +537,10 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         .select("*")
         .order("full_name")
         .limit(100);
-      return (data ?? []) as Profile[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES;
+      }
+      return data as Profile[];
     },
   });
 
@@ -405,7 +554,17 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         .select("*")
         .eq("date", today)
         .limit(200);
-      return (data ?? []) as AttendanceRow[];
+      if (!data || data.length === 0) {
+        return DEMO_PROFILES.map((p, idx) => ({
+          id: `demo-att-today-${p.id}`,
+          user_id: p.id,
+          date: today,
+          check_in: `${today}T09:15:00.000Z`,
+          check_out: idx % 2 === 0 ? `${today}T17:30:00.000Z` : null,
+          status: (idx === 3 ? "leave" : idx === 4 ? "half_day" : "present") as AttendanceRow["status"],
+        }));
+      }
+      return data as AttendanceRow[];
     },
   });
 
@@ -419,7 +578,22 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         .select("user_id, date, status")
         .gte("date", fourteenAgo)
         .limit(1000);
-      return (data ?? []) as Pick<AttendanceRow, "user_id" | "date" | "status">[];
+      if (!data || data.length === 0) {
+        const rows: Pick<AttendanceRow, "user_id" | "date" | "status">[] = [];
+        for (let i = 0; i < 14; i++) {
+          const d = subDays(new Date(), i);
+          const dateStr = format(d, "yyyy-MM-dd");
+          DEMO_PROFILES.forEach((p, idx) => {
+            rows.push({
+              user_id: p.id,
+              date: dateStr,
+              status: ((i + idx) % 5 === 0 ? "leave" : (i + idx) % 7 === 0 ? "half_day" : "present") as AttendanceRow["status"],
+            });
+          });
+        }
+        return rows;
+      }
+      return data as Pick<AttendanceRow, "user_id" | "date" | "status">[];
     },
   });
 
@@ -430,11 +604,51 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("leave_requests")
-        .select("*, profiles(full_name, employee_id, department)")
+        .select("*, profiles(full_name, employee_id, department, avatar_url)")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(50);
-      return (data ?? []) as unknown as LeaveRequest[];
+      if (!data || data.length === 0) {
+        return [
+          {
+            id: "demo-pending-1",
+            user_id: "demo-emp-2",
+            leave_type: "paid" as const,
+            start_date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
+            end_date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
+            remarks: "Vacation trip",
+            status: "pending" as const,
+            reviewer_comment: null,
+            reviewed_by: null,
+            created_at: new Date().toISOString(),
+            profiles: {
+              full_name: "Priya Sharma",
+              employee_id: "DF-002",
+              department: "Engineering",
+              avatar_url: null,
+            },
+          },
+          {
+            id: "demo-pending-2",
+            user_id: "demo-emp-4",
+            leave_type: "sick" as const,
+            start_date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+            end_date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+            remarks: "Doctor appointment",
+            status: "pending" as const,
+            reviewer_comment: null,
+            reviewed_by: null,
+            created_at: new Date().toISOString(),
+            profiles: {
+              full_name: "Ananya Iyer",
+              employee_id: "DF-004",
+              department: "Design",
+              avatar_url: null,
+            },
+          },
+        ] as unknown as LeaveRequest[];
+      }
+      return data as unknown as LeaveRequest[];
     },
   });
 
@@ -530,9 +744,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
   const presentToday = (todayRows ?? []).filter(
     (r) => r.status === "present" || r.status === "half_day",
   ).length;
-  const onLeaveToday = (todayRows ?? []).filter(
-    (r) => r.status === "leave",
-  ).length;
+  const onLeaveToday = (todayRows ?? []).filter((r) => r.status === "leave").length;
 
   return (
     <div>
@@ -541,8 +753,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           {greeting()}, {me.profile?.full_name?.split(" ")[0] ?? "there"}.
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          {format(new Date(), "EEEE, dd MMMM yyyy")} · Here's how the team is
-          doing.
+          {format(new Date(), "EEEE, dd MMMM yyyy")} · Here's how the team is doing.
         </p>
       </div>
 
@@ -618,11 +829,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={{ left: -20, right: 8, top: 4 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--border)"
-                  vertical={false}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="label"
                   tickLine={false}
@@ -677,9 +884,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-2">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Team by department
-          </h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Team by department</h2>
           <div className="mt-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -751,6 +956,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
               <div className="flex items-center gap-3">
                 <InitialsAvatar
                   name={l.profiles?.full_name ?? "?"}
+                  src={l.profiles?.avatar_url}
                   className="size-9 text-xs"
                 />
                 <div>
