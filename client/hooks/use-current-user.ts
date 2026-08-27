@@ -32,7 +32,7 @@ export function useCurrentUser() {
               const formattedName =
                 userEmail.includes("pranav")
                   ? "Pranav Hiremath"
-                  : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Admin User";
+                  : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Admin User";
 
               return {
                 id: "demo-user-id",
@@ -95,18 +95,18 @@ export function useCurrentUser() {
 
         const { data: created } = await supabase
           .from("profiles")
-          .upsert(fallback, { onConflict: "id" })
+          .upsert(fallback as any, { onConflict: "id" })
           .select("*")
           .maybeSingle();
 
-        profile = (created as Profile | null) ?? fallback;
+        profile = (created as unknown as Profile | null) ?? fallback;
       }
 
       const roleList = (roles ?? []).map((r: any) => String(r.role));
       return {
         id: user.id,
         email: user.email ?? "",
-        profile: (profile as Profile | null) ?? null,
+        profile: (profile as unknown as Profile | null) ?? null,
         roles: roleList,
         isAdmin: roleList.includes("admin"),
       };

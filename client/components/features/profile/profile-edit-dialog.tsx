@@ -55,7 +55,7 @@ export function ProfileEditDialog({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     full_name: profile.full_name,
-    employee_id: profile.employee_id,
+    employee_id: profile.employee_id ?? "",
     department: profile.department ?? "",
     designation: profile.designation ?? "",
     date_of_joining: profile.date_of_joining ?? "",
@@ -69,7 +69,7 @@ export function ProfileEditDialog({
       setPhotoPreview(null);
       setForm({
         full_name: profile.full_name,
-        employee_id: profile.employee_id,
+        employee_id: profile.employee_id ?? "",
         department: profile.department ?? "",
         designation: profile.designation ?? "",
         date_of_joining: profile.date_of_joining ?? "",
@@ -117,7 +117,7 @@ export function ProfileEditDialog({
             avatar_url: finalAvatarUrl,
             updated_at: new Date().toISOString(),
           };
-      const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
+      const { error } = await supabase.from("profiles").upsert(payload as any, { onConflict: "id" });
       if (error) throw error;
     },
     onSuccess: () => {
