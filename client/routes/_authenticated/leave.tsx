@@ -414,7 +414,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                   <div className="flex items-center gap-3">
                     <InitialsAvatar
                       name={l.profiles?.full_name ?? "?"}
-                      src={l.profiles?.avatar_url}
+                      src={(l.profiles as any)?.avatar_url}
                       className="size-10 text-xs"
                     />
                     <div>
@@ -490,7 +490,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                         <div className="flex items-center gap-3">
                           <InitialsAvatar
                             name={l.profiles?.full_name ?? "?"}
-                            src={l.profiles?.avatar_url}
+                            src={(l.profiles as any)?.avatar_url}
                             className="size-8 text-xs"
                           />
                           <span className="font-semibold text-foreground">

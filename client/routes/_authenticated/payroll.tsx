@@ -516,7 +516,7 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                       <div className="flex items-center gap-3">
                         <InitialsAvatar
                           name={s.profiles?.full_name ?? "?"}
-                          src={s.profiles?.avatar_url}
+                          src={(s.profiles as any)?.avatar_url}
                           className="size-9 text-xs"
                         />
                         <div>

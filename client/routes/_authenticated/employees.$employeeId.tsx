@@ -180,7 +180,7 @@ function EmployeeDetailPage() {
       if (!data) {
         return DEMO_PROFILES.find((p) => p.id === employeeId) ?? null;
       }
-      return data as Profile | null;
+      return data as unknown as Profile | null;
     },
   });
 
@@ -413,7 +413,7 @@ function EmployeeDetailPage() {
                 >
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      {format(new Date(r.date), "EEE, dd MMM")}
+                      {r.date ? format(new Date(r.date), "EEE, dd MMM") : "—"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatTime(r.check_in)} → {formatTime(r.check_out)}

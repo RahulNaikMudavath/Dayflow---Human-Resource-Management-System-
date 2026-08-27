@@ -191,7 +191,7 @@ function AuthPage() {
 
     if (data.user) {
       try {
-        await supabase.from("notifications").insert({
+        await (supabase.from("notifications").insert as any)({
           user_id: data.user.id,
           title: "Registration Successful",
           message: `Welcome to Dayflow HR, ${cleanName}! A registration confirmation notification has been sent to your email.`,

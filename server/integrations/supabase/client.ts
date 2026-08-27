@@ -164,7 +164,7 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         if (isDemoSessionActive()) {
           return mockRpc(fnName, args);
         }
-        return _supabase!.rpc(fnName as any, args);
+        return (_supabase!.rpc as any)(fnName, args);
       };
     }
 

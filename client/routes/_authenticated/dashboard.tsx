@@ -956,7 +956,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
               <div className="flex items-center gap-3">
                 <InitialsAvatar
                   name={l.profiles?.full_name ?? "?"}
-                  src={l.profiles?.avatar_url}
+                  src={(l.profiles as any)?.avatar_url}
                   className="size-9 text-xs"
                 />
                 <div>
