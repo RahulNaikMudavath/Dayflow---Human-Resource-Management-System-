@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { applyTheme, getInitialTheme } from "@/components/layout/theme-toggle";
 
 function NotFoundComponent() {
   return (
@@ -131,6 +132,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    applyTheme(getInitialTheme());
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
