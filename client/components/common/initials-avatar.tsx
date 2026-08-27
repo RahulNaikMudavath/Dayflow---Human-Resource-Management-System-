@@ -3,11 +3,23 @@ import { cn } from "@/lib/utils";
 
 export function InitialsAvatar({
   name,
+  src,
   className,
 }: {
   name: string;
+  src?: string | null;
   className?: string;
 }) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className={cn("flex shrink-0 items-center justify-center rounded-full object-cover", className ?? "size-10")}
+      />
+    );
+  }
+
   return (
     <span
       className={cn(
