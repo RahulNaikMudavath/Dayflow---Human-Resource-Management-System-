@@ -1,5 +1,8 @@
 -- Fix notification spoofing vulnerability
--- 1. Drop the overly permissive insert policy on notifications
+-- 1. Ensure type column exists on notifications table
+alter table public.notifications add column if not exists type text default 'system';
+
+-- 2. Drop the overly permissive insert policy on notifications
 drop policy if exists "Users and system create notifications" on public.notifications;
 
 -- 2. Restrict notification creation so users can only notify themselves unless they are an admin

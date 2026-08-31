@@ -125,11 +125,8 @@ as $$
   )
 $$;
 
-<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 -- RLS Policies
-=======
 drop policy if exists "Signed-in users can view profiles" on public.profiles;
->>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create policy "Signed-in users can view profiles"
   on public.profiles for select to authenticated using (true);
 
@@ -192,7 +189,6 @@ create policy "Admins can update salary structures"
   on public.salary_structures for update to authenticated
   using (public.has_role(auth.uid(), 'admin'));
 
-<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create policy "Users view their notifications" on public.notifications
   for select to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 create policy "Users and system create notifications" on public.notifications
@@ -201,9 +197,6 @@ create policy "Users update their notifications" on public.notifications
   for update to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
 -- 4. User Trigger Function
-=======
--- Trigger function with 100% fail-proof guards so GoTrue Auth never returns 500
->>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -247,7 +240,6 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-<<<<<<< HEAD:database/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql
   for each row execute function public.handle_new_user();
 
 -- 5. Seed Demo Users (Password: Dayflow@123)
@@ -338,6 +330,3 @@ values
   ('a0000000-0000-4000-8000-000000000006', 68000, 27200, 19000, 11500, '2025-04-01'),
   ('a0000000-0000-4000-8000-000000000007', 60000, 24000, 15000, 10000, '2025-04-01'),
   ('a0000000-0000-4000-8000-000000000008', 45000, 18000, 12000, 8000, '2025-04-01');
-=======
-  for each row execute function public.handle_new_user();
->>>>>>> origin/main:supabase/migrations/20260822060607_8c5bd804-88f7-47ab-b734-326969059167.sql

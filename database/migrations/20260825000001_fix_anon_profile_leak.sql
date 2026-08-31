@@ -3,6 +3,9 @@
 drop policy if exists "Unauthenticated users can verify emails for password reset" on public.profiles;
 
 -- 2. Create security definer function for email existence check during password reset
+DROP FUNCTION IF EXISTS public.check_email_exists(text);
+DROP FUNCTION IF EXISTS public.check_email_exists(text, text);
+
 create or replace function public.check_email_exists(_email text)
 returns boolean
 language plpgsql
