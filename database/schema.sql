@@ -190,6 +190,8 @@ create policy "Users and system create notifications" on public.notifications
   for insert to authenticated with check (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 create policy "Users update their notifications" on public.notifications
   for update to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
+create policy "Users delete their notifications" on public.notifications
+  for delete to authenticated using (user_id = auth.uid() or public.has_role(auth.uid(), 'admin'));
 
 -- Notify all HR Admins securely (bypasses RLS check for non-admin senders)
 create or replace function public.notify_admins(_title text, _message text, _type text default 'system')
