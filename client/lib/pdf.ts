@@ -374,3 +374,118 @@ export function exportPayrollPdf(opts: { profile: PdfProfile; salary: SalaryStru
   );
   savePdf(doc, `dayflow-payroll-${slug(profile.employee_id ?? "emp")}.pdf`);
 }
+
+/* ------------------------------------------------------------------ */
+/* Executive Analytics & Reports Summary                              */
+/* ------------------------------------------------------------------ */
+export function exportAnalyticsReportPdf(opts: {
+  dateRangeLabel: string;
+  totalEmployees: number;
+  avgAttendanceRate: number;
+  totalLeavesTaken: number;
+  totalNetPayroll: number;
+  deptBreakdown: { name: string; count: number; avgSalary: number }[];
+  leaveTypeBreakdown: { type: string; count: number }[];
+}) {
+  const {
+    dateRangeLabel,
+    totalEmployees,
+    avgAttendanceRate,
+    totalLeavesTaken,
+    totalNetPayroll,
+    deptBreakdown,
+    leaveTypeBreakdown,
+  } = opts;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const w = doc.internal.pageSize.getWidth();
+
+  header(doc, "Organization Analytics Report", dateRangeLabel);
+
+  // Executive summary hero box
+  doc.setFillColor(...CREAM);
+  doc.setDrawColor(...BORDER);
+  doc.roundedRect(14, 38, w - 28, 28, 2.5, 2.5, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text("EXECUTIVE METRICS SUMMARY", 20, 46);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...MUTED);
+  doc.text(`Active Employees: ${totalEmployees}`, 20, 53);
+  doc.text(`Avg Attendance Rate: ${avgAttendanceRate}%`, 20, 59);
+
+  doc.text(`Total Approved Leave Days: ${totalLeavesTaken} days`, 95, 53);
+  doc.text(`Total Net Payroll Payout: ${inr(totalNetPayroll)}`, 95, 59);
+
+  // Table 1: Department Headcount & Payroll Summary
+  autoTable(doc, {
+    startY: 72,
+    head: [["Department", "Headcount", "% Workforce", "Avg Net Salary"]],
+    body: deptBreakdown.map((d) => [
+      d.name,
+      String(d.count),
+      `${Math.round((d.count / (totalEmployees || 1)) * 100)}%`,
+      inr(d.avgSalary),
+    ]),
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: INK,
+      lineColor: BORDER,
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: ESPRESSO,
+      textColor: CREAM,
+      fontStyle: "bold",
+      fontSize: 8.5,
+    },
+    alternateRowStyles: { fillColor: PAPER },
+    columnStyles: {
+      1: { halign: "center" },
+      2: { halign: "center" },
+      3: { halign: "right" },
+    },
+  });
+
+  const y2 = lastTableY(doc, 130) + 10;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text("TIME OFF & LEAVE DISTRIBUTION", 14, y2);
+
+  // Table 2: Leave Breakdown
+  autoTable(doc, {
+    startY: y2 + 4,
+    head: [["Leave Type", "Days Consumed across Organization"]],
+    body: leaveTypeBreakdown.map((l) => [l.type, `${l.count} day(s)`]),
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: INK,
+      lineColor: BORDER,
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: ESPRESSO,
+      textColor: CREAM,
+      fontStyle: "bold",
+      fontSize: 8.5,
+    },
+    alternateRowStyles: { fillColor: PAPER },
+    columnStyles: {
+      1: { halign: "right" },
+    },
+  });
+
+  footer(doc, `Dayflow Analytics Report · Scope: ${dateRangeLabel}`);
+  savePdf(doc, `dayflow-analytics-report-${slug(dateRangeLabel)}.pdf`);
+}
+
