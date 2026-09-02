@@ -19,6 +19,7 @@ import { Route as AuthenticatedEmployeesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedLeaveRouteImport } from './routes/_authenticated/leave'
 import { Route as AuthenticatedPayrollRouteImport } from './routes/_authenticated/payroll'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as ApiAssistantRouteImport } from './routes/api/assistant'
 import { Route as AuthenticatedEmployeesIndexRouteImport } from './routes/_authenticated/employees.index'
 import { Route as AuthenticatedEmployeesEmployeeIdRouteImport } from './routes/_authenticated/employees.$employeeId'
@@ -72,6 +73,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiAssistantRoute = ApiAssistantRouteImport.update({
   id: '/api/assistant',
   path: '/api/assistant',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/leave': typeof AuthenticatedLeaveRoute
   '/payroll': typeof AuthenticatedPayrollRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/employees/$employeeId': typeof AuthenticatedEmployeesEmployeeIdRoute
   '/employees/': typeof AuthenticatedEmployeesIndexRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/leave': typeof AuthenticatedLeaveRoute
   '/payroll': typeof AuthenticatedPayrollRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/employees/$employeeId': typeof AuthenticatedEmployeesEmployeeIdRoute
   '/employees': typeof AuthenticatedEmployeesIndexRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_authenticated/leave': typeof AuthenticatedLeaveRoute
   '/_authenticated/payroll': typeof AuthenticatedPayrollRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/api/assistant': typeof ApiAssistantRoute
   '/_authenticated/employees/$employeeId': typeof AuthenticatedEmployeesEmployeeIdRoute
   '/_authenticated/employees/': typeof AuthenticatedEmployeesIndexRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/leave'
     | '/payroll'
     | '/profile'
+    | '/reports'
     | '/api/assistant'
     | '/employees/$employeeId'
     | '/employees/'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/leave'
     | '/payroll'
     | '/profile'
+    | '/reports'
     | '/api/assistant'
     | '/employees/$employeeId'
     | '/employees'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leave'
     | '/_authenticated/payroll'
     | '/_authenticated/profile'
+    | '/_authenticated/reports'
     | '/api/assistant'
     | '/_authenticated/employees/$employeeId'
     | '/_authenticated/employees/'
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/assistant': {
       id: '/api/assistant'
       path: '/api/assistant'
@@ -306,6 +325,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLeaveRoute: typeof AuthenticatedLeaveRoute
   AuthenticatedPayrollRoute: typeof AuthenticatedPayrollRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -316,6 +336,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLeaveRoute: AuthenticatedLeaveRoute,
   AuthenticatedPayrollRoute: AuthenticatedPayrollRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
