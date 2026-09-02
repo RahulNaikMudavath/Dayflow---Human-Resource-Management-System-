@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   CalendarCheck,
   IndianRupee,
   LayoutDashboard,
@@ -38,6 +39,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/assistant", label: "AI Assistant", icon: Sparkles },
+  { to: "/reports", label: "Analytics", icon: BarChart3, adminOnly: true },
   { to: "/attendance", label: "Attendance", icon: CalendarCheck },
   { to: "/leave", label: "Time Off", icon: Palmtree },
   { to: "/payroll", label: "Payroll", icon: IndianRupee },
@@ -51,10 +53,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("dayflow-sidebar-collapsed") === "true";
-  });
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCollapsed(localStorage.getItem("dayflow-sidebar-collapsed") === "true");
+    }
+  }, []);
 
   const toggleSidebar = () => {
     setCollapsed((prev) => {
@@ -118,7 +123,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       )
       .subscribe();
 
+    const handleLocalUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["leave"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["payroll"] });
+    };
+
+    window.addEventListener("dayflow-leave-updated", handleLocalUpdate);
+    window.addEventListener("storage", handleLocalUpdate);
+
     return () => {
+      window.removeEventListener("dayflow-leave-updated", handleLocalUpdate);
+      window.removeEventListener("storage", handleLocalUpdate);
       supabase.removeChannel(channel);
     };
   }, [me?.id, queryClient]);
@@ -126,6 +143,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const items = NAV_ITEMS.filter((i) => !i.adminOnly || me?.isAdmin);
 
   async function signOut() {
+    sessionStorage.removeItem("dayflow_cached_user");
+    sessionStorage.removeItem("dayflow_demo_session");
     localStorage.removeItem("dayflow_demo_session");
     await supabase.auth.signOut();
     queryClient.clear();
