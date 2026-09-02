@@ -11,6 +11,8 @@ import {
   leaveDayCount,
   processLeaveDecision,
   createLeaveRequestAndNotify,
+  getLocalPendingLeaves,
+  getReviewedDemoLeaves,
   type LeaveRequest,
   type LeaveStatus,
   type LeaveType,
@@ -196,17 +198,51 @@ function EmployeeLeave({ me }: { me: CurrentUser }) {
   const yearStart = format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd");
 
   const { data: myLeaves } = useQuery({
-    queryKey: ["leave", "mine", "all"],
-    refetchInterval: 3000,
+    queryKey: ["leave", "mine", "all", me.id],
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .eq("user_id", me.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      return (data ?? []) as unknown as LeaveRequest[];
+      let dbLeaves: LeaveRequest[] = [];
+      try {
+        const { data } = await supabase
+          .from("leave_requests")
+          .select("*")
+          .eq("user_id", me.id)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (data) dbLeaves = data as unknown as LeaveRequest[];
+      } catch (e) {
+        console.warn("My leaves fetch warning:", e);
+      }
+
+      const localLeaves = getLocalPendingLeaves();
+      const myLocal = localLeaves.filter(
+        (l) => l.user_id === me.id || me.id === "demo-user-id" || me.isAdmin
+      );
+
+      const dbMap = new Map<string, LeaveRequest>();
+      dbLeaves.forEach((l) => {
+        const key = `${l.user_id}_${l.leave_type}_${l.start_date}_${l.end_date}`;
+        dbMap.set(key, l);
+      });
+      myLocal.forEach((l) => {
+        const key = `${l.user_id}_${l.leave_type}_${l.start_date}_${l.end_date}`;
+        const existing = dbMap.get(key);
+        if (existing) {
+          dbMap.set(key, {
+            ...existing,
+            ...l,
+            status: l.status !== "pending" ? l.status : existing.status,
+            reviewer_comment: l.reviewer_comment ?? existing.reviewer_comment,
+          });
+        } else {
+          dbMap.set(key, l);
+        }
+      });
+
+      const combined = Array.from(dbMap.values());
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return combined;
     },
   });
 
@@ -323,15 +359,47 @@ function AdminLeave({ me }: { me: CurrentUser }) {
 
   const { data: requests } = useQuery({
     queryKey: ["leave", "admin", "all"],
-    refetchInterval: 3000,
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("leave_requests")
-        .select("*, profiles(full_name, employee_id, department, avatar_url)")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      return (data ?? []) as unknown as LeaveRequest[];
+      let dbLeaves: LeaveRequest[] = [];
+      try {
+        const { data } = await supabase
+          .from("leave_requests")
+          .select("*, profiles(full_name, employee_id, department, avatar_url)")
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (data) dbLeaves = data as unknown as LeaveRequest[];
+      } catch (e) {
+        console.warn("Admin leave DB fetch warning:", e);
+      }
+
+      const localLeaves = getLocalPendingLeaves();
+
+      const map = new Map<string, LeaveRequest>();
+      dbLeaves.forEach((l) => {
+        const key = `${l.user_id}_${l.leave_type}_${l.start_date}_${l.end_date}`;
+        map.set(key, l);
+      });
+
+      localLeaves.forEach((l) => {
+        const key = `${l.user_id}_${l.leave_type}_${l.start_date}_${l.end_date}`;
+        const existing = map.get(key);
+        if (existing) {
+          map.set(key, {
+            ...existing,
+            ...l,
+            status: l.status !== "pending" ? l.status : existing.status,
+            reviewer_comment: l.reviewer_comment ?? existing.reviewer_comment,
+          });
+        } else {
+          map.set(key, l);
+        }
+      });
+
+      const combined = Array.from(map.values());
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return combined;
     },
   });
 
@@ -414,7 +482,7 @@ function AdminLeave({ me }: { me: CurrentUser }) {
                   <div className="flex items-center gap-3">
                     <InitialsAvatar
                       name={l.profiles?.full_name ?? "?"}
-                      src={l.profiles?.avatar_url}
+                      src={(l.profiles as any)?.avatar_url}
                       className="size-10 text-xs"
                     />
                     <div>
@@ -467,59 +535,74 @@ function AdminLeave({ me }: { me: CurrentUser }) {
         </TabsContent>
 
         <TabsContent value="history" className="mt-5">
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lift">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                    <th className="px-6 py-3.5">Employee</th>
-                    <th className="px-6 py-3.5">Type</th>
-                    <th className="px-6 py-3.5">Dates</th>
-                    <th className="px-6 py-3.5">Days</th>
-                    <th className="px-6 py-3.5">Status</th>
-                    <th className="px-6 py-3.5">Comment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((l) => (
-                    <tr
-                      key={l.id}
-                      className="border-b border-border/60 last:border-0 hover:bg-secondary/50"
-                    >
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-3">
-                          <InitialsAvatar
-                            name={l.profiles?.full_name ?? "?"}
-                            src={l.profiles?.avatar_url}
-                            className="size-8 text-xs"
-                          />
-                          <span className="font-semibold text-foreground">
-                            {l.profiles?.full_name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3 text-muted-foreground">
-                        {LEAVE_TYPE_LABEL[l.leave_type]}
-                      </td>
-                      <td className="px-6 py-3 text-muted-foreground">
-                        {format(new Date(l.start_date), "dd MMM")} –{" "}
-                        {format(new Date(l.end_date), "dd MMM")}
-                      </td>
-                      <td className="px-6 py-3 text-foreground">
-                        {leaveDayCount(l.start_date, l.end_date)}
-                      </td>
-                      <td className="px-6 py-3">
-                        <LeaveStatusBadge status={l.status} />
-                      </td>
-                      <td className="max-w-48 truncate px-6 py-3 text-muted-foreground">
-                        {l.reviewer_comment ?? "—"}
-                      </td>
+          {history.length === 0 ? (
+            <EmptyState
+              icon={Palmtree}
+              title="No leave history"
+              description="Approved and rejected leave requests will be recorded here."
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lift">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                      <th className="px-6 py-3.5">Employee</th>
+                      <th className="px-6 py-3.5">Type</th>
+                      <th className="px-6 py-3.5">Dates</th>
+                      <th className="px-6 py-3.5">Days</th>
+                      <th className="px-6 py-3.5">Status</th>
+                      <th className="px-6 py-3.5">Comment</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {history.map((l) => (
+                      <tr
+                        key={l.id}
+                        className="border-b border-border/60 last:border-0 hover:bg-secondary/50"
+                      >
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <InitialsAvatar
+                              name={l.profiles?.full_name ?? "Employee"}
+                              src={(l.profiles as any)?.avatar_url}
+                              className="size-8 text-xs"
+                            />
+                            <div>
+                              <span className="font-semibold text-foreground block">
+                                {l.profiles?.full_name ?? "Employee"}
+                              </span>
+                              {l.profiles?.department && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {l.profiles.department}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 font-medium text-foreground">
+                          {LEAVE_TYPE_LABEL[l.leave_type]}
+                        </td>
+                        <td className="px-6 py-3 text-muted-foreground">
+                          {format(new Date(l.start_date), "dd MMM")} –{" "}
+                          {format(new Date(l.end_date), "dd MMM yyyy")}
+                        </td>
+                        <td className="px-6 py-3 font-medium text-foreground">
+                          {leaveDayCount(l.start_date, l.end_date)}
+                        </td>
+                        <td className="px-6 py-3">
+                          <LeaveStatusBadge status={l.status} />
+                        </td>
+                        <td className="max-w-48 truncate px-6 py-3 text-muted-foreground">
+                          {l.reviewer_comment ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
 

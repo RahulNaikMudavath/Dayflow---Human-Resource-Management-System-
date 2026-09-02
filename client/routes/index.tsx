@@ -8,6 +8,7 @@ import {
   Sunrise,
 } from "lucide-react";
 import heroImage from "@/assets/hero-dayflow.jpg";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,6 +63,7 @@ function LandingPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             to="/auth"
             className="rounded-xl px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"

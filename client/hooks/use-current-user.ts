@@ -32,7 +32,7 @@ export function useCurrentUser() {
               const formattedName =
                 userEmail.includes("pranav")
                   ? "Pranav Hiremath"
-                  : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Admin User";
+                  : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Admin User";
 
               return {
                 id: "demo-user-id",
@@ -61,10 +61,11 @@ export function useCurrentUser() {
         }
         return null;
       }
-      let [{ data: profile }, { data: roles }] = await Promise.all([
+      const [{ data: rawProfile }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", user.id),
       ]);
+      let profile: Profile | null = (rawProfile as unknown as Profile | null);
       if (!profile) {
         const metadata = user.user_metadata ?? {};
         const metaFullName =
@@ -95,18 +96,18 @@ export function useCurrentUser() {
 
         const { data: created } = await supabase
           .from("profiles")
-          .upsert(fallback, { onConflict: "id" })
+          .upsert(fallback as any, { onConflict: "id" })
           .select("*")
           .maybeSingle();
 
-        profile = (created as Profile | null) ?? fallback;
+        profile = (created as unknown as Profile | null) ?? fallback;
       }
 
       const roleList = (roles ?? []).map((r: any) => String(r.role));
       return {
         id: user.id,
         email: user.email ?? "",
-        profile: (profile as Profile | null) ?? null,
+        profile,
         roles: roleList,
         isAdmin: roleList.includes("admin"),
       };

@@ -66,7 +66,7 @@ function EmployeesPage() {
     const matchesSearch =
       !q ||
       p.full_name.toLowerCase().includes(q) ||
-      p.employee_id.toLowerCase().includes(q) ||
+      (p.employee_id ?? "").toLowerCase().includes(q) ||
       (p.designation ?? "").toLowerCase().includes(q);
     const matchesDept = dept === "all" || p.department === dept;
     return matchesSearch && matchesDept;

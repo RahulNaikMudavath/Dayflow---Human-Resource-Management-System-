@@ -379,7 +379,7 @@ function InteractiveLeaveReviewer({
           <div className="flex items-center justify-between">
             <h4 className="font-bold text-sm text-foreground truncate">{req.profiles?.full_name}</h4>
             <span className="text-[10px] text-muted-foreground font-mono bg-background px-1.5 py-0.5 rounded border">
-              ID: {req.profiles?.employee_id ?? "—"}
+              ID: {(req.profiles as any)?.employee_id ?? "—"}
             </span>
           </div>
           <p className="text-xs text-muted-foreground truncate">
@@ -1161,7 +1161,7 @@ export function AiAssistantWidget({
           const matched = allProfiles.filter(
             (p) =>
               p.full_name.toLowerCase().includes(term) ||
-              p.employee_id.toLowerCase().includes(term) ||
+              (p.employee_id && p.employee_id.toLowerCase().includes(term)) ||
               (p.department && p.department.toLowerCase().includes(term))
           );
 

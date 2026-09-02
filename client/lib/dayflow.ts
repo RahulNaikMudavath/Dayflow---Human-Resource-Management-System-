@@ -8,7 +8,7 @@ export type LeaveStatus = "pending" | "approved" | "rejected";
 
 export interface Profile {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
@@ -17,6 +17,8 @@ export interface Profile {
   designation: string | null;
   date_of_joining: string | null;
   avatar_url: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AttendanceRow {
@@ -446,7 +448,7 @@ export async function checkAndDispatchLeaveReminders(userId: string) {
 }
 
 export async function promoteUserToAdmin(userId: string) {
-  const { error } = await supabase.rpc("promote_user_to_admin" as any, {
+  const { error } = await (supabase.rpc as any)("promote_user_to_admin", {
     _target_user_id: userId,
   });
   if (error) {
@@ -455,7 +457,7 @@ export async function promoteUserToAdmin(userId: string) {
 }
 
 export async function verifyEmailExists(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("check_email_exists" as any, {
+  const { data, error } = await (supabase.rpc as any)("check_email_exists", {
     _email: email,
   });
   if (error) {

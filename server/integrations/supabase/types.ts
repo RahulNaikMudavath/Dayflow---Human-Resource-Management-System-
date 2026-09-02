@@ -146,7 +146,7 @@ export type Database = {
           department: string | null;
           designation: string | null;
           email: string | null;
-          employee_id: string;
+          employee_id: string | null;
           full_name: string;
           id: string;
           phone: string | null;

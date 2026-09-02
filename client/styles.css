@@ -3,6 +3,15 @@
 
 @variant dark (&:is(.dark *));
 
+/* Enforce pointer cursor on all buttons and interactive elements */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  cursor: pointer;
+}
+
 /*
  * Dayflow design system — "Daybreak Editorial"
  * Warm paper, espresso ink, sunrise amber. Fraunces display + Instrument Sans body.
@@ -68,12 +77,12 @@
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.968 0.014 92);
-  --foreground: oklch(0.27 0.035 55);
-  --card: oklch(0.985 0.01 94);
-  --card-foreground: oklch(0.27 0.035 55);
-  --popover: oklch(0.985 0.01 94);
-  --popover-foreground: oklch(0.27 0.035 55);
+  --background: oklch(0.972 0.012 92);
+  --foreground: oklch(0.25 0.035 55);
+  --card: oklch(0.995 0.005 94);
+  --card-foreground: oklch(0.25 0.035 55);
+  --popover: oklch(0.995 0.005 94);
+  --popover-foreground: oklch(0.25 0.035 55);
   --primary: oklch(0.58 0.165 48);
   --primary-foreground: oklch(0.97 0.015 92);
   --secondary: oklch(0.925 0.025 88);
@@ -100,35 +109,35 @@
   --chart-4: oklch(0.55 0.13 285);
   --chart-5: oklch(0.45 0.06 60);
 
-  --sidebar: oklch(0.235 0.03 52);
-  --sidebar-foreground: oklch(0.92 0.02 90);
+  --sidebar: oklch(0.18 0.03 52);
+  --sidebar-foreground: oklch(0.93 0.02 90);
   --sidebar-primary: oklch(0.68 0.17 55);
-  --sidebar-primary-foreground: oklch(0.24 0.03 52);
-  --sidebar-accent: oklch(0.305 0.035 52);
-  --sidebar-accent-foreground: oklch(0.95 0.02 90);
-  --sidebar-border: oklch(0.35 0.03 52);
+  --sidebar-primary-foreground: oklch(0.2 0.03 52);
+  --sidebar-accent: oklch(0.26 0.035 52);
+  --sidebar-accent-foreground: oklch(0.96 0.02 90);
+  --sidebar-border: oklch(0.32 0.03 52);
   --sidebar-ring: oklch(0.68 0.17 55);
 }
 
 .dark {
-  --background: oklch(0.2 0.025 52);
+  --background: oklch(0.19 0.022 52);
   --foreground: oklch(0.94 0.015 90);
   --card: oklch(0.24 0.03 52);
   --card-foreground: oklch(0.94 0.015 90);
   --popover: oklch(0.24 0.03 52);
   --popover-foreground: oklch(0.94 0.015 90);
   --primary: oklch(0.68 0.17 55);
-  --primary-foreground: oklch(0.24 0.03 52);
-  --secondary: oklch(0.29 0.03 52);
+  --primary-foreground: oklch(0.2 0.03 52);
+  --secondary: oklch(0.28 0.03 52);
   --secondary-foreground: oklch(0.94 0.015 90);
-  --muted: oklch(0.29 0.03 52);
+  --muted: oklch(0.27 0.025 52);
   --muted-foreground: oklch(0.72 0.03 70);
-  --accent: oklch(0.32 0.05 60);
+  --accent: oklch(0.3 0.045 60);
   --accent-foreground: oklch(0.94 0.02 85);
   --destructive: oklch(0.62 0.19 27);
   --destructive-foreground: oklch(0.97 0.015 92);
-  --border: oklch(0.94 0.015 90 / 12%);
-  --input: oklch(0.94 0.015 90 / 16%);
+  --border: oklch(0.94 0.015 90 / 14%);
+  --input: oklch(0.94 0.015 90 / 18%);
   --ring: oklch(0.68 0.17 55);
 
   --status-present: oklch(0.66 0.13 152);
@@ -143,13 +152,13 @@
   --chart-4: oklch(0.68 0.13 285);
   --chart-5: oklch(0.72 0.04 65);
 
-  --sidebar: oklch(0.17 0.02 52);
-  --sidebar-foreground: oklch(0.92 0.02 90);
+  --sidebar: oklch(0.12 0.025 48);
+  --sidebar-foreground: oklch(0.93 0.02 90);
   --sidebar-primary: oklch(0.68 0.17 55);
-  --sidebar-primary-foreground: oklch(0.24 0.03 52);
-  --sidebar-accent: oklch(0.27 0.03 52);
-  --sidebar-accent-foreground: oklch(0.95 0.02 90);
-  --sidebar-border: oklch(0.94 0.015 90 / 10%);
+  --sidebar-primary-foreground: oklch(0.18 0.03 52);
+  --sidebar-accent: oklch(0.2 0.035 50);
+  --sidebar-accent-foreground: oklch(0.96 0.02 90);
+  --sidebar-border: oklch(0.94 0.015 90 / 18%);
   --sidebar-ring: oklch(0.68 0.17 55);
 }
 
@@ -211,3 +220,49 @@
     scrollbar-width: none;
   }
 }
+
+@keyframes loader-spin-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loader-spin-ccw {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes loader-pulse-glow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.15); }
+}
+
+@keyframes loader-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes loader-float {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-6px) scale(1.03); }
+}
+
+.animate-loader-spin-cw {
+  animation: loader-spin-cw 3s linear infinite;
+}
+
+.animate-loader-spin-ccw {
+  animation: loader-spin-ccw 5s linear infinite;
+}
+
+.animate-loader-pulse-glow {
+  animation: loader-pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-loader-shimmer {
+  animation: loader-shimmer 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-loader-float {
+  animation: loader-float 3s ease-in-out infinite;
+}
+

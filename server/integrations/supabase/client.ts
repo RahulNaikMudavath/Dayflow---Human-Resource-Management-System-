@@ -31,7 +31,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
 function getClientStorage() {
   if (typeof window === "undefined") return undefined;
-  return localStorage;
+  return sessionStorage;
 }
 
 function createSupabaseClient() {
@@ -101,6 +101,10 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
               const demo = await mockAuth.getUser();
               if (demo.data?.user) return demo;
               try {
+                const sess = await target.getSession();
+                if (sess.data?.session?.user) {
+                  return { data: { user: sess.data.session.user }, error: null };
+                }
                 const res = await target.getUser();
                 if (res.data?.user) return res;
                 return demo;
@@ -164,7 +168,7 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         if (isDemoSessionActive()) {
           return mockRpc(fnName, args);
         }
-        return _supabase!.rpc(fnName as any, args);
+        return (_supabase!.rpc as any)(fnName, args);
       };
     }
 

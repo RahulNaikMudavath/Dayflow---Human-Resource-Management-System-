@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import ReactMarkdown from "react-markdown";
 import {
   Sparkles,
   Send,
@@ -591,22 +590,23 @@ function ActionButtons({ actions }: { actions: ActionId[] }) {
 }
 
 function Markdown({ text }: { text: string }) {
+  const lines = text.split("\n");
   return (
-    <ReactMarkdown
-      components={{
-        p: ({ children }) => (
-          <p className="my-1 leading-relaxed first:mt-0 last:mb-0">{children}</p>
-        ),
-        ul: ({ children }) => <ul className="my-1 list-disc space-y-0.5 pl-4">{children}</ul>,
-        ol: ({ children }) => <ol className="my-1 list-decimal space-y-0.5 pl-4">{children}</ol>,
-        li: ({ children }) => <li className="leading-relaxed marker:text-primary">{children}</li>,
-        strong: ({ children }) => (
-          <strong className="font-semibold text-foreground">{children}</strong>
-        ),
-      }}
-    >
-      {text}
-    </ReactMarkdown>
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-1" />;
+        const formatted = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+        if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
+          return (
+            <div key={i} className="flex items-start gap-1.5 pl-2">
+              <span className="text-primary font-bold">•</span>
+              <span dangerouslySetInnerHTML={{ __html: line.trim().slice(2).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+            </div>
+          );
+        }
+        return <p key={i} className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatted }} />;
+      })}
+    </div>
   );
 }
 

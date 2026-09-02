@@ -516,7 +516,7 @@ function AdminPayroll({ me }: { me: CurrentUser }) {
                       <div className="flex items-center gap-3">
                         <InitialsAvatar
                           name={s.profiles?.full_name ?? "?"}
-                          src={s.profiles?.avatar_url}
+                          src={(s.profiles as any)?.avatar_url}
                           className="size-9 text-xs"
                         />
                         <div>
@@ -647,11 +647,29 @@ function SalaryDialog({
 
   const save = useMutation({
     mutationFn: async () => {
+      const numBasic = Number(basic);
+      const numHra = Number(hra);
+      const numAllowances = Number(allowances);
+      const numDeductions = Number(deductions);
+
+      if (isNaN(numBasic) || numBasic < 0) {
+        throw new Error("Basic salary cannot be negative.");
+      }
+      if (isNaN(numHra) || numHra < 0) {
+        throw new Error("HRA cannot be negative.");
+      }
+      if (isNaN(numAllowances) || numAllowances < 0) {
+        throw new Error("Allowances cannot be negative.");
+      }
+      if (isNaN(numDeductions) || numDeductions < 0) {
+        throw new Error("Deductions cannot be negative.");
+      }
+
       const payload = {
-        basic: Number(basic) || 0,
-        hra: Number(hra) || 0,
-        allowances: Number(allowances) || 0,
-        deductions: Number(deductions) || 0,
+        basic: numBasic,
+        hra: numHra,
+        allowances: numAllowances,
+        deductions: numDeductions,
         updated_by: me.id,
         updated_at: new Date().toISOString(),
       };

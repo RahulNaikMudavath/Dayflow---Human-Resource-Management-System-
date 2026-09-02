@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<AttendanceStatus, [number, number, number]> = {
 
 export interface PdfProfile {
   full_name: string;
-  employee_id: string;
+  employee_id: string | null;
   department: string | null;
   designation: string | null;
 }
@@ -263,11 +263,11 @@ export function exportWeeklyAttendancePdf(opts: {
 
   footer(
     doc,
-    `Attendance for ${profile.full_name} (${profile.employee_id}) · Week of ${format(weekStart, "dd MMM yyyy")}`,
+    `Attendance for ${profile.full_name} (${profile.employee_id ?? "—"}) · Week of ${format(weekStart, "dd MMM yyyy")}`,
   );
   savePdf(
     doc,
-    `dayflow-attendance-${slug(profile.employee_id)}-${format(weekStart, "yyyy-MM-dd")}.pdf`,
+    `dayflow-attendance-${slug(profile.employee_id ?? "emp")}-${format(weekStart, "yyyy-MM-dd")}.pdf`,
   );
 }
 
@@ -370,7 +370,7 @@ export function exportPayrollPdf(opts: { profile: PdfProfile; salary: SalaryStru
 
   footer(
     doc,
-    `Salary summary for ${profile.full_name} (${profile.employee_id}) · Effective ${effective}`,
+    `Salary summary for ${profile.full_name} (${profile.employee_id ?? "—"}) · Effective ${effective}`,
   );
-  savePdf(doc, `dayflow-payroll-${slug(profile.employee_id)}.pdf`);
+  savePdf(doc, `dayflow-payroll-${slug(profile.employee_id ?? "emp")}.pdf`);
 }
