@@ -11,7 +11,10 @@ export const Route = createFileRoute("/_authenticated")({
     if (typeof window !== "undefined") {
       try {
         const { data } = await supabase.auth.getSession();
-        const hasDemoSession = !!localStorage.getItem("dayflow_demo_session");
+        const hasDemoSession = !!(
+          sessionStorage.getItem("dayflow_demo_session") ||
+          localStorage.getItem("dayflow_demo_session")
+        );
         if (!data?.session && !hasDemoSession) {
           throw redirect({ to: "/auth" });
         }
@@ -19,7 +22,10 @@ export const Route = createFileRoute("/_authenticated")({
         if (err && typeof err === "object" && "to" in err) {
           throw err;
         }
-        const hasDemoSession = !!localStorage.getItem("dayflow_demo_session");
+        const hasDemoSession = !!(
+          sessionStorage.getItem("dayflow_demo_session") ||
+          localStorage.getItem("dayflow_demo_session")
+        );
         if (!hasDemoSession) {
           throw redirect({ to: "/auth" });
         }
@@ -31,27 +37,30 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const navigate = useNavigate();
-  // Fast initial check: if session exists locally in browser storage, skip the blocking full-screen spinner
-  const [checking, setChecking] = useState(() => {
-    if (typeof window !== "undefined") {
-      const hasDemo = !!localStorage.getItem("dayflow_demo_session");
-      const hasSbToken = Object.keys(localStorage).some((k) => k.includes("auth-token"));
-      if (hasDemo || hasSbToken) return false;
-    }
-    return true;
-  });
+  const [isMounted, setIsMounted] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // useEffect only runs on the client after the initial render
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
     let mounted = true;
 
     async function checkAuth() {
       const { data } = await supabase.auth.getSession();
       const hasDemoSession =
-        typeof window !== "undefined" && !!localStorage.getItem("dayflow_demo_session");
+        typeof window !== "undefined" &&
+        !!(
+          sessionStorage.getItem("dayflow_demo_session") ||
+          localStorage.getItem("dayflow_demo_session")
+        );
 
       if (!data?.session && !hasDemoSession) {
         if (mounted) {
-          navigate({ to: "/auth" });
+          void navigate({ to: "/auth" });
         }
       } else {
         if (mounted) {
@@ -60,12 +69,13 @@ function AuthenticatedLayout() {
       }
     }
 
-    checkAuth();
+    void checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
+        sessionStorage.removeItem("dayflow_demo_session");
         localStorage.removeItem("dayflow_demo_session");
-        navigate({ to: "/auth" });
+        void navigate({ to: "/auth" });
       }
     });
 
@@ -73,9 +83,10 @@ function AuthenticatedLayout() {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [isMounted, navigate]);
 
-  if (checking) {
+  // Force both server and initial client render to show the spinner
+  if (!isMounted || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -83,6 +94,7 @@ function AuthenticatedLayout() {
     );
   }
 
+  // Once mounted on the client, render the actual layout
   return (
     <AppShell>
       <Outlet />

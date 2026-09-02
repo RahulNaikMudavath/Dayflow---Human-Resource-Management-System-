@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase, verifyEmailExists } from "@/lib/dayflow";
+import { sendWelcomeSignupEmail } from "@/lib/email-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -200,6 +201,17 @@ function AuthPage() {
       } catch (err) {
         console.warn("Could not insert in-app welcome notification:", err);
       }
+
+      try {
+        await sendWelcomeSignupEmail({
+          email: cleanEmail,
+          fullName: cleanName,
+          employeeId: cleanEmpId,
+          department,
+        });
+      } catch (emailErr) {
+        console.warn("Welcome signup email dispatch warning:", emailErr);
+      }
     }
 
     if (data.session) {
@@ -248,10 +260,13 @@ function AuthPage() {
         setResetSuccess(true);
         toast.success("Password reset link sent to your registered email!");
       }
-    } catch {
+    } catch (err: any) {
       setResetBusy(false);
-      setResetError("Email Not Registered");
-      toast.error("Email Not Registered");
+      const errMsg = err?.message && err.message.includes("Rate Limit")
+        ? err.message
+        : "Email Not Registered";
+      setResetError(errMsg);
+      toast.error(errMsg);
     }
   }
 

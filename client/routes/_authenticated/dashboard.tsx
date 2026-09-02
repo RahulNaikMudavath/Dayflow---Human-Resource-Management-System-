@@ -38,6 +38,9 @@ import {
   LEAVE_TYPE_LABEL,
   leaveDayCount,
   processLeaveDecision,
+  getLocalPendingLeaves,
+  getReviewedDemoLeaves,
+  isUUID,
   formatTime,
   workHours,
   formatHours,
@@ -89,32 +92,7 @@ function greeting() {
   return "Good evening";
 }
 
-function QuickAction({
-  to,
-  icon: Icon,
-  label,
-  hint,
-}: {
-  to: string;
-  icon: typeof UserRound;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-lift transition-colors hover:border-primary/40 hover:bg-accent/50"
-    >
-      <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-        <Icon className="size-5" />
-      </span>
-      <span>
-        <span className="block text-sm font-semibold text-foreground">{label}</span>
-        <span className="block text-xs text-muted-foreground">{hint}</span>
-      </span>
-    </Link>
-  );
-}
+
 
 function DashboardPage() {
   const { data: me } = useCurrentUser();
@@ -135,6 +113,8 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   const monthKey = format(startOfMonth(today), "yyyy-MM-dd");
 
   async function signOut() {
+    sessionStorage.removeItem("dayflow_cached_user");
+    sessionStorage.removeItem("dayflow_demo_session");
     localStorage.removeItem("dayflow_demo_session");
     await supabase.auth.signOut();
     queryClient.clear();
@@ -144,10 +124,11 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   const yearStart = format(new Date(today.getFullYear(), 0, 1), "yyyy-MM-dd");
 
   const { data: monthRows } = useQuery({
-    queryKey: ["attendance", "mine", monthKey],
-    refetchInterval: 3000,
+    queryKey: ["attendance", "mine", monthKey, me.id],
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
+      if (!isUUID(me.id)) return [];
       const { data } = await supabase
         .from("attendance")
         .select("*")
@@ -160,10 +141,11 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   });
 
   const { data: weekRows } = useQuery({
-    queryKey: ["attendance", "mine-week", format(weekStart, "yyyy-MM-dd")],
-    refetchInterval: 3000,
+    queryKey: ["attendance", "mine-week", format(weekStart, "yyyy-MM-dd"), me.id],
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
+      if (!isUUID(me.id)) return [];
       const { data } = await supabase
         .from("attendance")
         .select("*")
@@ -175,33 +157,69 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
   });
 
   const { data: myLeaves } = useQuery({
-    queryKey: ["leave", "mine", "recent"],
-    refetchInterval: 3000,
+    queryKey: ["leave", "mine", "recent", me.id],
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .eq("user_id", me.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return (data ?? []) as unknown as LeaveRequest[];
+      let dbLeaves: LeaveRequest[] = [];
+      if (isUUID(me.id)) {
+        try {
+          const { data } = await supabase
+            .from("leave_requests")
+            .select("*")
+            .eq("user_id", me.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          if (data) dbLeaves = data as unknown as LeaveRequest[];
+        } catch (e) {
+          console.warn("My leaves DB fetch warning:", e);
+        }
+      }
+
+      const localLeaves = getLocalPendingLeaves();
+      const myLocal = localLeaves.filter(
+        (l) => l.user_id === me.id || me.id === "demo-user-id" || me.isAdmin
+      );
+
+      const dbMap = new Map<string, LeaveRequest>();
+      dbLeaves.forEach((l) => dbMap.set(l.id, l));
+      myLocal.forEach((l) => dbMap.set(l.id, l));
+
+      const combined = Array.from(dbMap.values());
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return combined;
     },
   });
 
   const { data: approvedLeaves } = useQuery({
-    queryKey: ["leave", "mine-approved", yearStart],
-    refetchInterval: 3000,
+    queryKey: ["leave", "mine-approved", yearStart, me.id],
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .eq("user_id", me.id)
-        .eq("status", "approved")
-        .gte("start_date", yearStart)
-        .limit(100);
-      return (data ?? []) as unknown as LeaveRequest[];
+      let dbLeaves: LeaveRequest[] = [];
+      if (isUUID(me.id)) {
+        try {
+          const { data } = await supabase
+            .from("leave_requests")
+            .select("*")
+            .eq("user_id", me.id)
+            .eq("status", "approved")
+            .gte("start_date", yearStart)
+            .limit(100);
+          if (data) dbLeaves = data as unknown as LeaveRequest[];
+        } catch {}
+      }
+
+      const localLeaves = getLocalPendingLeaves();
+      const myLocalApproved = localLeaves.filter(
+        (l) => l.status === "approved" && (l.user_id === me.id || me.id === "demo-user-id" || me.isAdmin)
+      );
+
+      const dbMap = new Map<string, LeaveRequest>();
+      dbLeaves.forEach((l) => dbMap.set(l.id, l));
+      myLocalApproved.forEach((l) => dbMap.set(l.id, l));
+
+      return Array.from(dbMap.values());
     },
   });
 
@@ -234,10 +252,10 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
         </p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-accent/20 to-card p-5 shadow-lift">
+      <div className="mb-6 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-accent/20 to-[#faf6f0] p-5 shadow-lift">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md shrink-0">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-[#D95D28] text-white shadow-md shrink-0">
               <Sparkles className="size-6 animate-pulse" />
             </div>
             <div>
@@ -256,10 +274,10 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
           </div>
           <Button
             onClick={() => {
-              const btn = document.querySelector('button[title*="Nova AI"]') as HTMLButtonElement;
+              const btn = document.querySelector('button[aria-label*="AI Assistant"], button[title*="Nova AI"]') as HTMLButtonElement;
               btn?.click();
             }}
-            className="rounded-xl gap-2 font-semibold shadow-sm shrink-0"
+            className="rounded-xl gap-2 font-semibold shadow-sm shrink-0 bg-[#D95D28] hover:bg-[#c24e1e] text-white"
           >
             <Bot className="size-4" />
             Ask Nova AI
@@ -269,39 +287,7 @@ function EmployeeDashboard({ me }: { me: CurrentUser }) {
 
       <CheckInCard userId={me.id} />
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <QuickAction
-          to="/profile"
-          icon={UserRound}
-          label="Profile"
-          hint="View & edit your details"
-        />
-        <QuickAction
-          to="/attendance"
-          icon={CalendarCheck}
-          label="Attendance"
-          hint="Check-ins & history"
-        />
-        <QuickAction
-          to="/leave"
-          icon={Palmtree}
-          label="Leave requests"
-          hint="Apply & track time off"
-        />
-        <button
-          type="button"
-          onClick={signOut}
-          className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-lift transition-colors hover:border-destructive/40 hover:bg-destructive/5"
-        >
-          <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-destructive/10 group-hover:text-destructive">
-            <LogOut className="size-5" />
-          </span>
-          <span>
-            <span className="block text-sm font-semibold text-foreground">Log out</span>
-            <span className="block text-xs text-muted-foreground">End your session</span>
-          </span>
-        </button>
-      </div>
+
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -529,7 +515,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
 
   const { data: everyone = DEMO_PROFILES } = useQuery({
     queryKey: ["profiles", "all"],
-    refetchInterval: 3000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await supabase
@@ -546,7 +532,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
 
   const { data: todayRows } = useQuery({
     queryKey: ["attendance", "day", today],
-    refetchInterval: 3000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await supabase
@@ -570,7 +556,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
 
   const { data: rangeRows } = useQuery({
     queryKey: ["attendance", "range", fourteenAgo],
-    refetchInterval: 3000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await supabase
@@ -599,18 +585,41 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
 
   const { data: pendingLeaves } = useQuery({
     queryKey: ["leave", "pending"],
-    refetchInterval: 3000,
+    refetchInterval: 2000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("leave_requests")
-        .select("*, profiles(full_name, employee_id, department, avatar_url)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (!data || data.length === 0) {
-        return [
-          {
+      let dbLeaves: LeaveRequest[] = [];
+      try {
+        const { data } = await supabase
+          .from("leave_requests")
+          .select("*, profiles(full_name, employee_id, department, avatar_url)")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (data) {
+          dbLeaves = data as unknown as LeaveRequest[];
+        }
+      } catch (e) {
+        console.warn("Error fetching pending leaves from DB:", e);
+      }
+
+      const reviewedSet = new Set(getReviewedDemoLeaves());
+
+      // Exclude any leave item that has been approved or rejected
+      const activeDb = dbLeaves.filter((l) => !reviewedSet.has(l.id));
+      const localPending = getLocalPendingLeaves().filter((l) => l.status === "pending" && !reviewedSet.has(l.id));
+      const existingIds = new Set(activeDb.map((l) => l.id));
+      const filteredLocal = localPending.filter((l) => !existingIds.has(l.id));
+
+      const combined = [...filteredLocal, ...activeDb];
+
+      const demo1Available = !reviewedSet.has("demo-pending-1");
+      const demo2Available = !reviewedSet.has("demo-pending-2");
+
+      if (combined.length === 0 && (demo1Available || demo2Available)) {
+        const defaultDemos: LeaveRequest[] = [];
+        if (demo1Available) {
+          defaultDemos.push({
             id: "demo-pending-1",
             user_id: "demo-emp-2",
             leave_type: "paid" as const,
@@ -627,8 +636,10 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
               department: "Engineering",
               avatar_url: null,
             },
-          },
-          {
+          } as unknown as LeaveRequest);
+        }
+        if (demo2Available) {
+          defaultDemos.push({
             id: "demo-pending-2",
             user_id: "demo-emp-4",
             leave_type: "sick" as const,
@@ -645,10 +656,11 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
               department: "Design",
               avatar_url: null,
             },
-          },
-        ] as unknown as LeaveRequest[];
+          } as unknown as LeaveRequest);
+        }
+        return defaultDemos;
       }
-      return data as unknown as LeaveRequest[];
+      return combined;
     },
   });
 
@@ -662,10 +674,12 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           reviewer_comment: "Approved from dashboard",
           reviewer_id: me.id,
         });
-      } else {
+      } else if (isUUID(id)) {
+        const updatePayload: any = { status: "approved" };
+        if (isUUID(me.id)) updatePayload.reviewed_by = me.id;
         const { error } = await supabase
           .from("leave_requests")
-          .update({ status: "approved", reviewed_by: me.id })
+          .update(updatePayload)
           .eq("id", id);
         if (error) throw error;
       }
@@ -690,10 +704,12 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           reviewer_comment: "Declined from dashboard",
           reviewer_id: me.id,
         });
-      } else {
+      } else if (isUUID(id)) {
+        const updatePayload: any = { status: "rejected" };
+        if (isUUID(me.id)) updatePayload.reviewed_by = me.id;
         const { error } = await supabase
           .from("leave_requests")
-          .update({ status: "rejected", reviewed_by: me.id })
+          .update(updatePayload)
           .eq("id", id);
         if (error) throw error;
       }
@@ -760,7 +776,7 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
       <div className="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/20 via-amber-900/10 to-card p-5 shadow-lift">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-amber-600 text-amber-50 shadow-md shrink-0">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-[#D97706] text-white shadow-md shrink-0">
               <Bot className="size-6 animate-pulse" />
             </div>
             <div>
@@ -779,10 +795,10 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
           </div>
           <Button
             onClick={() => {
-              const btn = document.querySelector('button[title*="Nova HR"]') as HTMLButtonElement;
+              const btn = document.querySelector('button[aria-label*="AI Assistant"], button[title*="Nova HR"]') as HTMLButtonElement;
               btn?.click();
             }}
-            className="rounded-xl gap-2 font-semibold shadow-sm shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+            className="rounded-xl gap-2 font-semibold shadow-sm shrink-0 bg-[#D97706] hover:bg-[#b45309] text-white"
           >
             <Bot className="size-4" />
             Launch HR Command
@@ -823,9 +839,17 @@ function AdminDashboard({ me }: { me: CurrentUser }) {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift lg:col-span-3">
-          <h2 className="font-display text-lg font-semibold text-foreground">
-            Attendance — last two weeks
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-foreground">
+              Attendance — last two weeks
+            </h2>
+            <Link
+              to="/reports"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              Full Analytics & Reports <ArrowRight className="size-3" />
+            </Link>
+          </div>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={{ left: -20, right: 8, top: 4 }}>
