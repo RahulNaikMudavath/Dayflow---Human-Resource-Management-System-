@@ -1506,7 +1506,7 @@ export function AiAssistantWidget({
       {isOpen && (
         <div
           className={cn(
-            "fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-3xl border border-amber-500/30 bg-card text-foreground shadow-2xl transition-all duration-300 backdrop-blur-2xl animate-in fade-in zoom-in-95 ring-1 ring-amber-500/20",
+            "fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-[28px] border border-[#eedfd0] bg-[#faf6f0] text-[#382d24] shadow-2xl transition-all duration-300 backdrop-blur-2xl animate-in fade-in zoom-in-95 ring-1 ring-[#eab308]/20",
             isExpanded
               ? "h-[92vh] w-[92vw] max-w-4xl"
               : "h-[640px] w-[92vw] max-w-md sm:w-[430px]"
@@ -1522,30 +1522,29 @@ export function AiAssistantWidget({
 
   function renderChatHeader() {
     return (
-      <div className="flex items-center justify-between border-b border-amber-500/30 bg-gradient-to-r from-amber-950 via-amber-900 to-amber-950 text-amber-50 px-4 py-3 backdrop-blur-xl transition-all shadow-xs shrink-0 select-none">
+      <div className="flex items-center justify-between border-b border-[#f59e0b]/30 bg-[#401804] text-[#fef3c7] px-4 py-3.5 shadow-md shrink-0 select-none rounded-t-[28px]">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Avatar Icon */}
-          <div className="relative flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-600 via-amber-500 to-amber-400 text-amber-950 ring-2 ring-amber-400/40 shadow-md shadow-amber-950/40 transition-all">
-            {isAdmin ? <Shield className="size-5" /> : <Bot className="size-5" />}
-            <span className="absolute -bottom-0.5 -right-0.5 flex size-3 items-center justify-center">
-              <span className="absolute size-full rounded-full bg-emerald-400 animate-ping opacity-75" />
-              <span className="relative size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+          <div className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f59e0b] text-[#401804] shadow-md ring-2 ring-[#78350f]/60">
+            {isAdmin ? <ShieldCheck className="size-5.5 text-[#401804]" /> : <Bot className="size-5.5 text-[#401804]" />}
+            <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-[#00c48c] ring-2 ring-white">
+              <span className="size-2 rounded-full bg-white/40 animate-ping" />
             </span>
           </div>
 
           {/* Titles & Mode Badge */}
           <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-display text-sm font-bold tracking-tight text-amber-50 whitespace-nowrap flex items-center gap-1.5">
+              <h3 className="font-serif text-base font-bold tracking-tight text-white whitespace-nowrap flex items-center gap-1.5 drop-shadow-xs">
                 {isAdmin ? "Nova HR Command" : "Nova Employee Assistant"}
-                <Sparkles className="size-3.5 text-amber-400 fill-amber-400/30 animate-pulse shrink-0" />
+                <Sparkles className="size-4 text-[#f5e900] fill-[#f5e900]/30 shrink-0" />
               </h3>
-              <span className="rounded-full px-2 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shrink-0 shadow-2xs border bg-amber-400/20 text-amber-300 border-amber-400/40">
-                {isAdmin ? "HR Director" : "Employee Mode"}
+              <span className="rounded-full px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shrink-0 shadow-2xs border bg-[#f59e0b]/15 text-[#fef08a] border-[#f59e0b]/60">
+                {isAdmin ? "HR DIRECTOR" : "EMPLOYEE MODE"}
               </span>
             </div>
-            <p className="text-[11px] text-amber-200/80 font-medium truncate flex items-center gap-1.5 mt-0.5">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <p className="text-[11px] text-[#e2b078] font-medium truncate flex items-center gap-1.5 mt-0.5">
+              <span className="size-1.5 rounded-full bg-[#00c48c] shrink-0" />
               {isAdmin ? "Operations & Payroll Intelligence" : "Attendance & Leave Agent"}
             </p>
           </div>
@@ -1556,7 +1555,7 @@ export function AiAssistantWidget({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 rounded-xl opacity-80 hover:opacity-100 text-amber-200 hover:text-red-300 hover:bg-amber-800/50 transition-all cursor-pointer"
+            className="size-8 rounded-xl text-[#e2b078] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             onClick={handleClearChat}
             title="Clear Chat History"
           >
@@ -1566,7 +1565,7 @@ export function AiAssistantWidget({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 rounded-xl opacity-80 hover:opacity-100 text-amber-200 hover:text-amber-50 hover:bg-amber-800/50 transition-all cursor-pointer"
+            className="size-8 rounded-xl text-[#e2b078] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             onClick={() => setSpeechEnabled(!speechEnabled)}
             title={speechEnabled ? "Mute Voice Response" : "Enable Voice Response"}
           >
@@ -1578,7 +1577,7 @@ export function AiAssistantWidget({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-xl opacity-80 hover:opacity-100 text-amber-200 hover:text-amber-50 hover:bg-amber-800/50 transition-all cursor-pointer"
+                className="size-8 rounded-xl text-[#e2b078] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
                 title={isExpanded ? "Minimize Window" : "Expand Window"}
               >
@@ -1588,7 +1587,7 @@ export function AiAssistantWidget({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-xl opacity-80 hover:opacity-100 text-amber-200 hover:text-red-300 hover:bg-amber-800/50 transition-all cursor-pointer"
+                className="size-8 rounded-xl text-[#e2b078] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 onClick={() => setIsOpen(false)}
                 title="Close Assistant"
               >
@@ -1603,7 +1602,7 @@ export function AiAssistantWidget({
 
   function renderChatBody() {
     return (
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto no-scrollbar p-4 scroll-smooth">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto no-scrollbar p-4 scroll-smooth bg-[#faf6f0]">
         {messages.map((m) => (
           <div
             key={m.id}
@@ -1626,12 +1625,10 @@ export function AiAssistantWidget({
 
               <div
                 className={cn(
-                  "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm transition-all flex-1",
+                  "rounded-3xl p-4 text-sm leading-relaxed shadow-sm transition-all flex-1 font-sans",
                   m.sender === "user"
-                    ? isAdmin
-                      ? "bg-gradient-to-r from-amber-600 to-amber-700 text-amber-50 rounded-br-xs shadow-amber-950/20"
-                      : "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-br-xs shadow-primary/20"
-                    : "bg-card/90 text-card-foreground border border-border/80 rounded-bl-xs backdrop-blur-md"
+                    ? "bg-gradient-to-r from-[#d66518] to-[#c8560c] text-white rounded-br-xs shadow-md"
+                    : "bg-white text-[#382d24] border border-[#eedfd0] rounded-bl-xs shadow-xs"
                 )}
               >
                 <FormattedText text={m.text} />
@@ -1659,7 +1656,7 @@ export function AiAssistantWidget({
 
                 {/* Attendance Summary Payload */}
                 {m.type === "attendance_summary" && m.payload && (
-                  <div className="mt-3 rounded-2xl bg-background/90 p-3.5 border border-border/80 text-foreground space-y-2.5 shadow-sm">
+                  <div className="mt-3 rounded-2xl bg-[#faf6f0] p-3.5 border border-[#eedfd0] text-[#382d24] space-y-2.5 shadow-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted-foreground">Today Status</span>
                       <span
@@ -1674,11 +1671,11 @@ export function AiAssistantWidget({
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-xl bg-muted/60 p-2 text-center">
+                      <div className="rounded-xl bg-white p-2 text-center border border-[#eedfd0]/60">
                         <span className="text-[10px] text-muted-foreground uppercase font-bold block">Check In</span>
                         <span className="font-bold text-foreground">{m.payload.check_in ?? "—"}</span>
                       </div>
-                      <div className="rounded-xl bg-muted/60 p-2 text-center">
+                      <div className="rounded-xl bg-white p-2 text-center border border-[#eedfd0]/60">
                         <span className="text-[10px] text-muted-foreground uppercase font-bold block">Check Out</span>
                         <span className="font-bold text-foreground">{m.payload.check_out ?? "—"}</span>
                       </div>
@@ -1696,7 +1693,7 @@ export function AiAssistantWidget({
 
                 {/* Employee Info Payload */}
                 {m.type === "employee_info" && m.payload && (
-                  <div className="mt-3 rounded-2xl bg-background/90 p-3.5 border border-border/80 text-foreground space-y-2 shadow-sm">
+                  <div className="mt-3 rounded-2xl bg-[#faf6f0] p-3.5 border border-[#eedfd0] text-[#382d24] space-y-2 shadow-xs">
                     <div className="flex items-center gap-3">
                       <InitialsAvatar name={m.payload.full_name} className="size-10 text-sm" />
                       <div>
@@ -1705,17 +1702,17 @@ export function AiAssistantWidget({
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                      <div className="rounded-lg bg-muted/60 p-2">
+                      <div className="rounded-lg bg-white p-2 border border-[#eedfd0]/60">
                         <span className="text-muted-foreground text-[10px]">Employee ID</span>
                         <p className="font-semibold">{m.payload.employee_id}</p>
                       </div>
-                      <div className="rounded-lg bg-muted/60 p-2">
+                      <div className="rounded-lg bg-white p-2 border border-[#eedfd0]/60">
                         <span className="text-muted-foreground text-[10px]">Email</span>
                         <p className="font-semibold truncate">{m.payload.email ?? "N/A"}</p>
                       </div>
                     </div>
                     {m.payload.salary && (
-                      <div className="rounded-xl bg-accent/30 p-2.5 text-xs flex justify-between items-center font-medium">
+                      <div className="rounded-xl bg-white p-2.5 text-xs flex justify-between items-center font-medium border border-[#eedfd0]/60">
                         <span>Monthly Net Pay</span>
                         <span className="font-bold text-foreground">{formatINR(netPay(m.payload.salary))}</span>
                       </div>
@@ -1746,16 +1743,16 @@ export function AiAssistantWidget({
                 </button>
               )}
             </div>
-            <span className="text-[10px] text-muted-foreground px-1">{m.timestamp}</span>
+            <span className="text-[11px] text-[#9c8e82] font-mono mt-0.5 px-1">{m.timestamp}</span>
           </div>
         ))}
 
         {isThinking && (
-          <div className="flex items-center gap-2 text-muted-foreground text-xs p-3 rounded-2xl bg-card/60 border border-border/50 w-fit">
+          <div className="flex items-center gap-2 text-[#786656] text-xs p-3 rounded-2xl bg-white border border-[#eedfd0] w-fit shadow-xs">
             <div className="flex items-center gap-1">
-              <span className={cn("size-2 rounded-full animate-bounce", isAdmin ? "bg-amber-500" : "bg-primary")} style={{ animationDelay: "0ms" }} />
-              <span className={cn("size-2 rounded-full animate-bounce", isAdmin ? "bg-amber-500" : "bg-primary")} style={{ animationDelay: "150ms" }} />
-              <span className={cn("size-2 rounded-full animate-bounce", isAdmin ? "bg-amber-500" : "bg-primary")} style={{ animationDelay: "300ms" }} />
+              <span className="size-2 rounded-full bg-[#d66518] animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="size-2 rounded-full bg-[#d66518] animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="size-2 rounded-full bg-[#d66518] animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
             <span className="font-medium text-xs">{isAdmin ? "Nova HR Command is evaluating..." : "Nova is formulating a response..."}</span>
           </div>
@@ -1770,19 +1767,14 @@ export function AiAssistantWidget({
     const activePrompts = isAdmin ? HR_ADMIN_PROMPTS : EMPLOYEE_PROMPTS;
 
     return (
-      <div className="border-t border-border/80 bg-card/95 p-3.5 space-y-3 backdrop-blur-xl">
+      <div className="border-t border-[#eedfd0]/80 bg-[#faf6f0] p-3.5 space-y-3 backdrop-blur-xl">
         {/* Suggestion Chips */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
           {activePrompts.map((p) => (
             <button
               key={p.label}
               onClick={() => handleSend(p.prompt)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs",
-                isAdmin
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 hover:bg-amber-500/25"
-                  : "border-border/80 bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#eedfd0] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#4a3a2c] shadow-xs hover:bg-[#f5e9dc] hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
               {p.label}
             </button>
@@ -1791,18 +1783,17 @@ export function AiAssistantWidget({
 
         {/* Input & Voice Controls */}
         <div className="flex items-center gap-2">
-          <Button
-            variant={isListening ? "destructive" : "outline"}
-            size="icon"
-            className={cn(
-              "size-10 rounded-2xl shrink-0 transition-all",
-              isListening && "animate-pulse ring-4 ring-destructive/30"
-            )}
+          <button
+            type="button"
             onClick={toggleListening}
             title={isListening ? "Stop voice listening" : "Voice input command"}
+            className={cn(
+              "size-11 rounded-full bg-white border border-[#eedfd0] text-[#6b5849] hover:bg-[#f5e9dc] hover:text-[#382d24] shadow-xs flex items-center justify-center shrink-0 transition-all cursor-pointer",
+              isListening && "animate-pulse ring-4 ring-destructive/30 border-destructive text-destructive"
+            )}
           >
-            {isListening ? <MicOff className="size-4 animate-spin" /> : <Mic className="size-4 text-muted-foreground" />}
-          </Button>
+            {isListening ? <MicOff className="size-4 animate-spin" /> : <Mic className="size-4" />}
+          </button>
 
           <Input
             value={input}
@@ -1811,24 +1802,19 @@ export function AiAssistantWidget({
             placeholder={
               isAdmin
                 ? "Ask pending approvals, team attendance, absent list..."
-                : "Type check-in, leave balance, request leave..."
+                : "Type check-in, leave balance, request leave.."
             }
-            className="rounded-2xl bg-background/90 text-xs sm:text-sm focus-visible:ring-primary h-10 shadow-inner"
+            className="h-11 flex-1 rounded-full bg-white border border-[#eedfd0] px-4 text-xs sm:text-sm placeholder:text-[#9c8e82] text-[#382d24] shadow-inner focus-visible:ring-2 focus-visible:ring-[#d97706]/30"
           />
 
-          <Button
-            size="icon"
+          <button
+            type="button"
             onClick={() => handleSend()}
             disabled={!input.trim()}
-            className={cn(
-              "size-10 rounded-2xl shrink-0 text-primary-foreground shadow-md transition-transform active:scale-95",
-              isAdmin
-                ? "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600"
-                : "bg-gradient-to-r from-primary to-accent hover:opacity-90"
-            )}
+            className="size-11 rounded-full bg-gradient-to-r from-[#e4934e] via-[#d66518] to-[#c8560c] text-white shadow-md hover:brightness-105 active:scale-95 flex items-center justify-center shrink-0 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="size-4" />
-          </Button>
+          </button>
         </div>
       </div>
     );

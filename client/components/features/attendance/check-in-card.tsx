@@ -8,6 +8,7 @@ import {
   formatTime,
   workHours,
   formatWorkDuration,
+  isUUID,
   type AttendanceRow,
 } from "@/lib/dayflow";
 import { Button } from "@/components/ui/button";
@@ -39,15 +40,24 @@ export function CheckInCard({ userId }: { userId: string }) {
 
   const checkIn = useMutation({
     mutationFn: async () => {
-      const id = `att_${userId}_${today}`;
       const iso = new Date().toISOString();
-      const { error } = await supabase.from("attendance").upsert({
-        id,
+      const payload: Record<string, any> = {
         user_id: userId,
         date: today,
         check_in: iso,
         status: "present",
-      });
+      };
+      if (isUUID(userId)) {
+        payload["updated_by"] = userId;
+      }
+      if (todayRow?.id && isUUID(todayRow.id)) {
+        payload["id"] = todayRow.id;
+      }
+
+      const { error } = await (supabase.from("attendance" as any) as any).upsert(
+        payload,
+        { onConflict: "user_id,date" }
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -62,12 +72,21 @@ export function CheckInCard({ userId }: { userId: string }) {
 
   const checkOut = useMutation({
     mutationFn: async () => {
-      const id = `att_${userId}_${today}`;
       const iso = new Date().toISOString();
-      const { error } = await supabase
-        .from("attendance")
-        .update({ check_out: iso })
-        .eq("id", id);
+      const updateData: Record<string, any> = {
+        check_out: iso,
+      };
+      if (isUUID(userId)) {
+        updateData["updated_by"] = userId;
+      }
+
+      let query = (supabase.from("attendance" as any) as any).update(updateData);
+      if (todayRow?.id && isUUID(todayRow.id)) {
+        query = query.eq("id", todayRow.id);
+      } else {
+        query = query.eq("user_id", userId).eq("date", today);
+      }
+      const { error } = await query;
       if (error) throw error;
     },
     onSuccess: () => {
