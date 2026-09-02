@@ -9,9 +9,20 @@ export interface CurrentUser {
   isAdmin: boolean;
 }
 
+function getCachedUser(): CurrentUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem("dayflow_cached_user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useCurrentUser() {
   return useQuery({
     queryKey: ["current-user"],
+    initialData: getCachedUser,
     queryFn: async (): Promise<CurrentUser | null> => {
       const {
         data: { user },
@@ -19,7 +30,9 @@ export function useCurrentUser() {
 
       if (!user) {
         if (typeof window !== "undefined") {
-          const rawDemo = localStorage.getItem("dayflow_demo_session");
+          const rawDemo =
+            sessionStorage.getItem("dayflow_demo_session") ||
+            localStorage.getItem("dayflow_demo_session");
           if (rawDemo) {
             try {
               const parsed = JSON.parse(rawDemo);
@@ -34,7 +47,7 @@ export function useCurrentUser() {
                   ? "Pranav Hiremath"
                   : userEmail.split("@")[0]?.replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Admin User";
 
-              return {
+              const demoRes: CurrentUser = {
                 id: "demo-user-id",
                 email: userEmail,
                 profile: {
@@ -54,11 +67,14 @@ export function useCurrentUser() {
                 roles: [isAdmin ? "admin" : "employee"],
                 isAdmin,
               };
+              sessionStorage.setItem("dayflow_cached_user", JSON.stringify(demoRes));
+              return demoRes;
             } catch {
               // ignore
             }
           }
         }
+        sessionStorage.removeItem("dayflow_cached_user");
         return null;
       }
       const [{ data: rawProfile }, { data: roles }] = await Promise.all([
@@ -104,14 +120,18 @@ export function useCurrentUser() {
       }
 
       const roleList = (roles ?? []).map((r: any) => String(r.role));
-      return {
+      const res: CurrentUser = {
         id: user.id,
         email: user.email ?? "",
         profile,
         roles: roleList,
         isAdmin: roleList.includes("admin"),
       };
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("dayflow_cached_user", JSON.stringify(res));
+      }
+      return res;
     },
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 }
