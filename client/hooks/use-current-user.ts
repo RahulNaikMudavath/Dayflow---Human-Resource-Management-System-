@@ -12,52 +12,59 @@ export interface CurrentUser {
 function getCachedUser(): CurrentUser | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw =
-      sessionStorage.getItem("dayflow_cached_user") ||
-      localStorage.getItem("dayflow_cached_user");
-    if (raw) return JSON.parse(raw);
-
     const rawDemo =
       sessionStorage.getItem("dayflow_demo_session") ||
       localStorage.getItem("dayflow_demo_session");
     if (rawDemo) {
       const parsed = JSON.parse(rawDemo);
-      const userEmail = parsed.email || "pranavhiremath7777@gmail.com";
-      const isAdmin =
-        parsed.role === "admin" ||
-        userEmail.includes("admin") ||
-        userEmail.includes("pranav");
+      const sessionUser = parsed.user || parsed;
+      const metadata = sessionUser.user_metadata || {};
+      const userEmail = (sessionUser.email || "").toLowerCase();
+      const userRole =
+        metadata.role ||
+        sessionUser.role ||
+        (userEmail.includes("admin") ? "admin" : "employee");
+      const isAdmin = userRole === "admin";
 
-      const formattedName = userEmail.includes("pranav")
-        ? "Pranav Hiremath"
-        : userEmail
-            .split("@")[0]
-            ?.replace(/[._]/g, " ")
-            .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Admin User";
+      const formattedName =
+        metadata.full_name ||
+        (userEmail.includes("priya")
+          ? "Priya Sharma"
+          : userEmail.includes("admin")
+          ? "HR Admin"
+          : userEmail
+              .split("@")[0]
+              ?.replace(/[._]/g, " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Employee");
 
       const demoUser: CurrentUser = {
-        id: "demo-user-id",
+        id: sessionUser.id || (isAdmin ? "demo-admin-id" : "demo-emp-2"),
         email: userEmail,
         profile: {
-          id: "demo-user-id",
-          employee_id: isAdmin ? "DF-001" : "DF-002",
+          id: sessionUser.id || (isAdmin ? "demo-admin-id" : "demo-emp-2"),
+          employee_id: metadata.employee_id || (isAdmin ? "DF-001" : "DF-002"),
           full_name: formattedName,
           email: userEmail,
-          phone: "+91 98220 41102",
+          phone: "+91 98765 43210",
           address: "Bengaluru, India",
-          department: isAdmin ? "People Ops" : "Engineering",
-          designation: isAdmin ? "Head of HR & Operations" : "Senior Engineer",
+          department: metadata.department || (isAdmin ? "People Ops" : "Engineering"),
+          designation: metadata.designation || (isAdmin ? "Head of HR & Operations" : "Senior Engineer"),
           date_of_joining: "2022-01-01",
           avatar_url: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-        roles: [isAdmin ? "admin" : "employee"],
+        roles: [userRole],
         isAdmin,
       };
-      sessionStorage.setItem("dayflow_cached_user", JSON.stringify(demoUser));
       return demoUser;
     }
+
+    const raw =
+      sessionStorage.getItem("dayflow_cached_user") ||
+      localStorage.getItem("dayflow_cached_user");
+    if (raw) return JSON.parse(raw);
+
     return null;
   } catch {
     return null;
@@ -85,6 +92,45 @@ export function useCurrentUser() {
           return getCachedUser();
         }
 
+        const metadata = user.user_metadata || {};
+        const userEmail = (user.email || "").toLowerCase();
+        const metaRole = metadata.role || (userEmail.includes("admin") ? "admin" : "employee");
+        const isDemo =
+          user.id?.startsWith("a0000000") ||
+          user.id?.startsWith("demo-") ||
+          user.id?.startsWith("user_") ||
+          !!sessionStorage.getItem("dayflow_demo_session") ||
+          !!localStorage.getItem("dayflow_demo_session");
+
+        if (isDemo) {
+          const isAdmin = metaRole === "admin";
+          const res: CurrentUser = {
+            id: user.id,
+            email: userEmail,
+            profile: {
+              id: user.id,
+              employee_id: metadata.employee_id || (isAdmin ? "DF-001" : "DF-002"),
+              full_name: metadata.full_name || (isAdmin ? "HR Admin" : "Priya Sharma"),
+              email: userEmail,
+              phone: "+91 98765 43210",
+              address: "Bengaluru, India",
+              department: metadata.department || (isAdmin ? "People Ops" : "Engineering"),
+              designation: metadata.designation || (isAdmin ? "Head of HR & Operations" : "Senior Engineer"),
+              date_of_joining: "2022-01-01",
+              avatar_url: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            roles: [metaRole],
+            isAdmin,
+          };
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("dayflow_cached_user", JSON.stringify(res));
+            localStorage.setItem("dayflow_cached_user", JSON.stringify(res));
+          }
+          return res;
+        }
+
         const [{ data: rawProfile }, { data: roles }] = await Promise.all([
           supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
           supabase.from("user_roles").select("role").eq("user_id", user.id),
@@ -92,7 +138,6 @@ export function useCurrentUser() {
 
         let profile: Profile | null = (rawProfile as unknown as Profile | null);
         if (!profile) {
-          const metadata = user.user_metadata ?? {};
           const metaFullName =
             typeof metadata["full_name"] === "string" ? metadata["full_name"] : undefined;
           const metaEmpId =

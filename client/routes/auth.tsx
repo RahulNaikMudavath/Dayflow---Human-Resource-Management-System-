@@ -276,6 +276,13 @@ function AuthPage() {
     setPassword("Dayflow@123");
     setSignInError(null);
     setBusy(true);
+
+    // Clear previous cached session before switching demo role
+    sessionStorage.removeItem("dayflow_cached_user");
+    localStorage.removeItem("dayflow_cached_user");
+    sessionStorage.removeItem("dayflow_demo_session");
+    localStorage.removeItem("dayflow_demo_session");
+
     const { error } = await supabase.auth.signInWithPassword({
       email: demoEmail,
       password: "Dayflow@123",
