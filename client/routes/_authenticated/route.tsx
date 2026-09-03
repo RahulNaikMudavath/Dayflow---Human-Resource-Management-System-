@@ -9,24 +9,31 @@ export const Route = createFileRoute("/_authenticated")({
     // Only check auth in beforeLoad during client-side navigation.
     // On SSR (server side), window is undefined and client localStorage/session cannot be read.
     if (typeof window !== "undefined") {
+      const hasDemoSession = !!(
+        sessionStorage.getItem("dayflow_demo_session") ||
+        localStorage.getItem("dayflow_demo_session") ||
+        sessionStorage.getItem("dayflow_cached_user") ||
+        localStorage.getItem("dayflow_cached_user")
+      );
+      if (hasDemoSession) return;
+
       try {
         const { data } = await supabase.auth.getSession();
-        const hasDemoSession = !!(
-          sessionStorage.getItem("dayflow_demo_session") ||
-          localStorage.getItem("dayflow_demo_session")
-        );
-        if (!data?.session && !hasDemoSession) {
+        if (!data?.session) {
           throw redirect({ to: "/auth" });
         }
       } catch (err) {
         if (err && typeof err === "object" && "to" in err) {
           throw err;
         }
-        const hasDemoSession = !!(
+        // Fallback check
+        const hasSessionNow = !!(
           sessionStorage.getItem("dayflow_demo_session") ||
-          localStorage.getItem("dayflow_demo_session")
+          localStorage.getItem("dayflow_demo_session") ||
+          sessionStorage.getItem("dayflow_cached_user") ||
+          localStorage.getItem("dayflow_cached_user")
         );
-        if (!hasDemoSession) {
+        if (!hasSessionNow) {
           throw redirect({ to: "/auth" });
         }
       }
@@ -50,19 +57,32 @@ function AuthenticatedLayout() {
     let mounted = true;
 
     async function checkAuth() {
-      const { data } = await supabase.auth.getSession();
-      const hasDemoSession =
-        typeof window !== "undefined" &&
-        !!(
-          sessionStorage.getItem("dayflow_demo_session") ||
-          localStorage.getItem("dayflow_demo_session")
-        );
+      try {
+        const hasDemoSession =
+          typeof window !== "undefined" &&
+          !!(
+            sessionStorage.getItem("dayflow_demo_session") ||
+            localStorage.getItem("dayflow_demo_session") ||
+            sessionStorage.getItem("dayflow_cached_user") ||
+            localStorage.getItem("dayflow_cached_user")
+          );
 
-      if (!data?.session && !hasDemoSession) {
-        if (mounted) {
-          void navigate({ to: "/auth" });
+        if (hasDemoSession) {
+          if (mounted) setChecking(false);
+          return;
         }
-      } else {
+
+        const { data } = await supabase.auth.getSession();
+        if (!data?.session) {
+          if (mounted) {
+            void navigate({ to: "/auth" });
+          }
+        } else {
+          if (mounted) {
+            setChecking(false);
+          }
+        }
+      } catch {
         if (mounted) {
           setChecking(false);
         }
@@ -75,6 +95,8 @@ function AuthenticatedLayout() {
       if (event === "SIGNED_OUT") {
         sessionStorage.removeItem("dayflow_demo_session");
         localStorage.removeItem("dayflow_demo_session");
+        sessionStorage.removeItem("dayflow_cached_user");
+        localStorage.removeItem("dayflow_cached_user");
         void navigate({ to: "/auth" });
       }
     });

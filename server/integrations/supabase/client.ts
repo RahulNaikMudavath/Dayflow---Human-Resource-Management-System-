@@ -88,6 +88,9 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         get(target, authProp) {
           if (authProp === "getSession") {
             return async () => {
+              if (isDemoSessionActive()) {
+                return await mockAuth.getSession();
+              }
               const demo = await mockAuth.getSession();
               if (demo.data?.session) return demo;
               try {
@@ -101,6 +104,9 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
           }
           if (authProp === "getUser") {
             return async () => {
+              if (isDemoSessionActive()) {
+                return await mockAuth.getUser();
+              }
               const demo = await mockAuth.getUser();
               if (demo.data?.user) return demo;
               try {
@@ -118,6 +124,10 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
           }
           if (authProp === "signInWithPassword") {
             return async (credentials: any) => {
+              const email = (credentials?.email || "").toLowerCase().trim();
+              if (email.endsWith("@dayflow.io") || email.includes("demo")) {
+                return await mockAuth.signInWithPassword(credentials);
+              }
               try {
                 const res = await target.signInWithPassword(credentials);
                 if (res.error) {

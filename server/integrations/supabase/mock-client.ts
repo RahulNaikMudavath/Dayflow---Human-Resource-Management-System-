@@ -128,6 +128,7 @@ export const mockAuth = {
 
     if (typeof window !== "undefined") {
       sessionStorage.setItem("dayflow_demo_session", JSON.stringify(session));
+      localStorage.setItem("dayflow_demo_session", JSON.stringify(session));
     }
     return { data: { user, session }, error: null };
   },
@@ -174,6 +175,7 @@ export const mockAuth = {
 
     if (typeof window !== "undefined") {
       sessionStorage.setItem("dayflow_demo_session", JSON.stringify(session));
+      localStorage.setItem("dayflow_demo_session", JSON.stringify(session));
     }
     return { data: { user, session }, error: null };
   },
@@ -181,6 +183,9 @@ export const mockAuth = {
   async signOut() {
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("dayflow_demo_session");
+      localStorage.removeItem("dayflow_demo_session");
+      sessionStorage.removeItem("dayflow_cached_user");
+      localStorage.removeItem("dayflow_cached_user");
     }
     return { error: null };
   },
