@@ -20,6 +20,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         chunkFileNames: (chunkInfo) => {
