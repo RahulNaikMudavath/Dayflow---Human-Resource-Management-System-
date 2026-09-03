@@ -47,7 +47,9 @@ const saveNotificationsStore = (data: any) => setStore("dayflow_db_notifications
 export const mockAuth = {
   async getSession() {
     if (typeof window === "undefined") return { data: { session: null }, error: null };
-    const sessionStr = sessionStorage.getItem("dayflow_demo_session");
+    const sessionStr =
+      sessionStorage.getItem("dayflow_demo_session") ||
+      localStorage.getItem("dayflow_demo_session");
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);
@@ -61,7 +63,9 @@ export const mockAuth = {
 
   async getUser() {
     if (typeof window === "undefined") return { data: { user: null }, error: null };
-    const sessionStr = sessionStorage.getItem("dayflow_demo_session");
+    const sessionStr =
+      sessionStorage.getItem("dayflow_demo_session") ||
+      localStorage.getItem("dayflow_demo_session");
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);

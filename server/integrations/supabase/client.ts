@@ -25,7 +25,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set("apikey", supabaseKey);
-    return fetch(input, { ...init, headers });
+    const timeoutSignal = typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(3500) : undefined;
+    const signal = init?.signal || timeoutSignal;
+
+    return fetch(input, { ...init, headers, signal });
   };
 }
 
