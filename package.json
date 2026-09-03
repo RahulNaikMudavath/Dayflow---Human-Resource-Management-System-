@@ -15,6 +15,12 @@
   "overrides": {
     "rolldown": "1.2.1"
   },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "1.2.1",
+    "@rolldown/binding-linux-x64-musl": "1.2.1",
+    "@rolldown/binding-darwin-arm64": "1.2.1",
+    "@rolldown/binding-win32-x64-msvc": "1.2.1"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",

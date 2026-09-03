@@ -9,7 +9,7 @@ ENV CI=true
 
 # Install dependencies with clean cache
 COPY package.json package-lock.json ./
-RUN npm ci --prefer-offline --no-audit
+RUN npm install --prefer-offline --no-audit
 
 # Copy source files
 COPY . .
