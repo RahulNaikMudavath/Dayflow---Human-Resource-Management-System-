@@ -401,9 +401,9 @@ const DEMO_PROFILES: Profile[] = [
   {
     id: "demo-user-id",
     employee_id: "DF-001",
-    full_name: "Pranav Hiremath",
-    email: "pranavhiremath7777@gmail.com",
-    phone: "+91 98220 41102",
+    full_name: "Unknown",
+    email: "unknown@dayflow.io",
+    phone: "+91 98000 00000",
     address: "Bengaluru, India",
     department: "People Ops",
     designation: "Head of HR & Operations",

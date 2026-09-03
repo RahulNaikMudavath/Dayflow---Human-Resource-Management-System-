@@ -131,10 +131,8 @@ npm run build
 
 ## 👨‍💻 Author & Repository
 
-- **Author**: Pranav Hiremath ([pranavhiremath7777@gmail.com](mailto:pranavhiremath7777@gmail.com))
 - **Repository**: [RahulNaikMudavath/Dayflow---Human-Resource-Management-System-](https://github.com/RahulNaikMudavath/Dayflow---Human-Resource-Management-System-)
-- **Branch**: `pranav`
-- **Live Deployment**: [https://dayflow-hrms-rose.vercel.app/](https://dayflow-hrms-rose.vercel.app/)
+- **Live Deployment**: [https://dayflow-hrms-mjbi.onrender.com/](https://dayflow-hrms-mjbi.onrender.com/)
 
 ---
 

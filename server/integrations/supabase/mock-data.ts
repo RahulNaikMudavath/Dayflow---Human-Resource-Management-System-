@@ -6,9 +6,9 @@ export const INITIAL_PROFILES: Record<string, Profile & { created_at?: string; u
   "a0000000-0000-4000-8000-000000000001": {
     id: "a0000000-0000-4000-8000-000000000001",
     employee_id: "DF-001",
-    full_name: "Aarav Mehta",
+    full_name: "Unknown",
     email: "admin@dayflow.io",
-    phone: "+91 98220 41102",
+    phone: "+91 98000 00000",
     address: "HSR Layout, Bengaluru",
     department: "People Ops",
     designation: "Head of People",

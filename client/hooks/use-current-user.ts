@@ -28,14 +28,14 @@ function getCachedUser(): CurrentUser | null {
 
       const formattedName =
         metadata.full_name ||
-        (userEmail.includes("priya")
-          ? "Priya Sharma"
-          : userEmail.includes("admin")
-          ? "HR Admin"
-          : userEmail
-              .split("@")[0]
-              ?.replace(/[._]/g, " ")
-              .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Employee");
+          (userEmail.includes("priya")
+            ? "Priya Sharma"
+            : userEmail.includes("admin")
+            ? "Unknown"
+            : userEmail
+                .split("@")[0]
+                ?.replace(/[._]/g, " ")
+                .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Unknown");
 
       const demoUser: CurrentUser = {
         id: sessionUser.id || (isAdmin ? "demo-admin-id" : "demo-emp-2"),
@@ -110,7 +110,7 @@ export function useCurrentUser() {
             profile: {
               id: user.id,
               employee_id: metadata.employee_id || (isAdmin ? "DF-001" : "DF-002"),
-              full_name: metadata.full_name || (isAdmin ? "HR Admin" : "Priya Sharma"),
+              full_name: metadata.full_name || (isAdmin ? "Unknown" : "Priya Sharma"),
               email: userEmail,
               phone: "+91 98765 43210",
               address: "Bengaluru, India",
